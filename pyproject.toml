@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "misp_training_environment"
+version = "0.1.0"
+description = ""
+authors = ["Raphaël Vinot <raphael@vinot.info>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+gitpython = "^3.1.0"
+pymisp = "^2.4.122"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+ipython = "^7.13.0"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
