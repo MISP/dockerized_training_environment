@@ -1,6 +1,11 @@
 # dokerized_training_environment
 A training environment, with docker.
 
+nginx is a reverse proxy allowing you to conect to all the MISPs instance:
+* http://misp-central.local
+* http://misp-1.local
+* ....
+
 # What does what
 
 * `init_misps.py`: Initialize N dockers
