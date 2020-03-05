@@ -5,10 +5,11 @@ import os
 from subprocess import Popen
 import shlex
 from pathlib import Path
+from generic_config import prefix_client_node
 
 misps_root = Path('misps')
 
-for misp_dir in misps_root.glob('misp*'):
+for misp_dir in misps_root.glob(f'{prefix_client_node}*'):
     cur_dir = os.getcwd()
     os.chdir(misp_dir)
     command = shlex.split('sudo docker-compose exec misp apt update')

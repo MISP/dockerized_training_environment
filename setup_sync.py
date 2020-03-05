@@ -3,45 +3,18 @@
 import json
 from pathlib import Path
 from pymisp import ExpandedPyMISP, MISPOrganisation, MISPUser
+from generic_config import central_node_name, prefix_client_node
 
 misp_instances_dir = Path('misps')
-
-central_node_config = {
-    'misp_central': {
-        'orgname': 'Central Node',
-        'email_site_admin': 'admin@centralnode.local'
-    }
-}
-
-orgs_config = {
-    'misp1': {
-        'orgname': 'Node 1',
-        'email_site_admin': 'admin@node1.local'
-    },
-    'misp2': {
-        'orgname': 'Node 2',
-        'email_site_admin': 'admin@node2.local'
-    },
-    'misp3': {
-        'orgname': 'Node 3',
-        'email_site_admin': 'admin@node3.local'
-    },
-    'misp4': {
-        'orgname': 'Node 4',
-        'email_site_admin': 'admin@node4.local'
-    },
-    'misp5': {
-        'orgname': 'Node 5',
-        'email_site_admin': 'admin@node5.local'
-    }
-}
 
 
 class MISPInstance():
 
-    def __init__(self, node_id, params):
+    def __init__(self, node_id):
         with (misp_instances_dir / node_id / 'config.json').open() as f:
             self.instance_config = json.load(f)
+
+        print('Initialize', self.instance_config['admin_orgname'])
 
         self.initial_user_connector = ExpandedPyMISP(self.instance_config['baseurl'], self.instance_config['admin_key'], ssl=False, debug=False)
         # Set the default role (id 3 is normal user)
@@ -50,11 +23,11 @@ class MISPInstance():
 
         # Create organisation
         organisation = MISPOrganisation()
-        organisation.name = params['orgname']
+        organisation.name = self.instance_config['admin_orgname']
         self.host_org = self.initial_user_connector.add_organisation(organisation)
         # Create Site admin in new org
         user = MISPUser()
-        user.email = params['email_site_admin']
+        user.email = self.instance_config['email_site_admin']
         user.org_id = self.host_org.id
         user.role_id = 1  # Site admin
         self.host_site_admin = self.initial_user_connector.add_user(user)
@@ -95,9 +68,11 @@ class MISPInstance():
             raise Exception(f'Sync test failed: {r}')
 
 
-central_node = MISPInstance('misp_central', central_node_config['misp_central'])
+central_node = MISPInstance(central_node_name)
 
-for node_id, params in orgs_config.items():
-    instance = MISPInstance(node_id, params)
+for path in misp_instances_dir.glob(f'{prefix_client_node}*'):
+    if path.name == central_node_name:
+        continue
+    instance = MISPInstance(path.name)
     sync_server_config = central_node.create_sync_user(instance.host_org)
     instance.create_sync_server(f'Sync with {sync_server_config.url}', sync_server_config)

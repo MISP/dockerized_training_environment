@@ -1,3 +1,6 @@
 [submodule "misp-refresh"]
 	path = misp-refresh
 	url = https://github.com/SteveClement/misp-refresh.git
+[submodule "nginx-proxy"]
+	path = nginx-proxy
+	url = https://github.com/nginx-proxy/nginx-proxy.git

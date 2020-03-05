@@ -9,14 +9,12 @@ import shlex
 import os
 import random
 import string
-
-number_instances = 5
-# NOTE: There will be an extra instances (the central node), where all the client synchronize with (push)
-
-internal_network_name = 'custom_misp_training_environment'
+from generic_config import (internal_network_name, number_instances, central_node_name,
+                            hostname_suffix, prefix_client_node, admin_email_name,
+                            central_node_org_name, client_node_org_name_prefix)
 
 
-def prepare_docker_compose(path, http_port, https_port):
+def prepare_docker_compose(path, http_port, https_port, hostname):
     with (path / 'docker-compose.yml').open() as f:
         docker_content = f.read()
     docker_content = docker_content.replace('80:80', f'{http_port}:80')
@@ -24,12 +22,31 @@ def prepare_docker_compose(path, http_port, https_port):
 
     # Add refresh script
     if docker_content.find('misp-refresh') < 0:
-        docker_content = docker_content.replace('volumes:', 'volumes:\n      - "../../misp-refresh:/var/www/MISP/misp-refresh/"')
+        # Add misp-refresh
+        add_misp_refresh = """
+    volumes:
+      - "../../misp-refresh:/var/www/MISP/misp-refresh/"
+"""
+        docker_content = docker_content.replace('    volumes:', add_misp_refresh)
 
     # Add network configuration so all the containers are on the same
     if docker_content.find('networks') < 0:
-        docker_content = docker_content.replace('#      - "NOREDIR=true" #Do not redirect port 80', '      - "NOREDIR=true" #Do not redirect port 80\n    networks:\n        - default\n        - misp-test-sync')
-        docker_content += f'\nnetworks:\n    misp-test-sync:\n        external:\n            name: {internal_network_name}\n'
+        add_network = f"""
+      - "NOREDIR=true" #Do not redirect port 80
+      - "VIRTUAL_HOST={hostname}"
+    networks:
+      - default
+      - misp-test-sync
+"""
+        docker_content = docker_content.replace('#      - "NOREDIR=true" #Do not redirect port 80', add_network)
+
+        add_external_network = f"""
+networks:
+    misp-test-sync:
+        external:
+            name: {internal_network_name}
+"""
+        docker_content += add_external_network
 
     with (path / 'docker-compose.yml').open('w') as f:
         f.write(docker_content)
@@ -68,7 +85,7 @@ def initial_misp_setup(path, config):
     p = Popen(command)
     p.wait()
     # Set baseurl
-    command = shlex.split(f'sudo docker-compose exec misp /bin/bash /var/www/MISP/app/Console/cake baseurl {config["baseurl"]}')
+    command = shlex.split(f'sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake baseurl {config["baseurl"]}')
     p = Popen(command)
     p.wait()
     # Run DB updates
@@ -79,6 +96,10 @@ def initial_misp_setup(path, config):
     command = shlex.split(f'sudo docker-compose exec misp /bin/bash /var/www/MISP/app/Console/cake admin change_authkey admin@admin.test {config["admin_key"]}')
     p = Popen(command)
     p.wait()
+    # Turn the instance live
+    command = shlex.split(f'sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake live 1')
+    p = Popen(command)
+    p.wait()
     os.chdir(cur_dir)
 
 
@@ -87,12 +108,32 @@ misp_instances_dir = Path('misps')
 misp_instances_dir.mkdir(exist_ok=True)
 master_repo = git.Repo('.')
 width = len(str(number_instances))
+for_hostsfile = ''
+
 for instance_id in range(number_instances + 1):
+    config = {
+        'http_port': f'80{instance_id}',
+        'https_port': f'443{instance_id}',
+        'admin_key': ''.join(random.choices(string.ascii_uppercase + string.digits, k=40)),
+    }
+
     if instance_id == 0:
         # Central node
-        misp_docker_dir = misp_instances_dir / 'misp_central'
+        misp_docker_dir = misp_instances_dir / central_node_name
+        config['baseurl'] = f'http://{central_node_name}{hostname_suffix}'
+        config['hostname'] = f'{central_node_name}{hostname_suffix}'
+        config['email_site_admin'] = f"{admin_email_name}@{config['hostname']}"
+        config['admin_orgname'] = central_node_org_name
     else:
-        misp_docker_dir = misp_instances_dir / 'misp{0:0{width}}'.format(instance_id, width=width)
+        client_name = f'{prefix_client_node}{instance_id:0{width}}'
+        misp_docker_dir = misp_instances_dir / client_name
+        config['baseurl'] = f'http://{client_name}{hostname_suffix}'
+        config['hostname'] = f'{client_name}{hostname_suffix}'
+        config['email_site_admin'] = f"{admin_email_name}@{config['hostname']}"
+        config['admin_orgname'] = f'{client_node_org_name_prefix}{instance_id:0{width}}'
+
+    for_hostsfile += f"127.0.0.1    {config['hostname']}\n"
+
     if misp_docker_dir.exists():
         instance_repo = git.Repo(misp_docker_dir)
         instance_repo.git.checkout('docker-compose.yml')
@@ -100,14 +141,7 @@ for instance_id in range(number_instances + 1):
     else:
         instance_repo = git.repo.base.Repo.clone_from('https://github.com/coolacid/docker-misp.git', str(misp_docker_dir))
 
-    config = {
-        'http_port': f'80{instance_id}',
-        'https_port': f'443{instance_id}',
-        'baseurl': f'https://localhost:443{instance_id}/',
-        'admin_key': ''.join(random.choices(string.ascii_uppercase + string.digits, k=40))
-    }
-
-    prepare_docker_compose(misp_docker_dir, config['http_port'], config['https_port'])
+    prepare_docker_compose(misp_docker_dir, config['http_port'], config['https_port'], config['hostname'])
 
     # Initialize network (does nothing if already existing)
     command = shlex.split(f'sudo docker network create {internal_network_name}')
@@ -121,3 +155,8 @@ for instance_id in range(number_instances + 1):
 
     with (misp_docker_dir / 'config.json').open('w') as f:
         json.dump(config, f, indent=2)
+
+print('Entries for /etc/hosts:')
+print(for_hostsfile)
+
+print('If there were any errors, re-run te script before setting up the sync, or it will fail.')
