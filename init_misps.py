@@ -11,7 +11,7 @@ import random
 import string
 import yaml
 from generic_config import (internal_network_name, number_instances, central_node_name,
-                            hostname_suffix, prefix_client_node, admin_email_name,
+                            hostname_suffix, prefix_client_node, admin_email_name, orgadmin_email_name,
                             central_node_org_name, client_node_org_name_prefix)
 
 
@@ -109,6 +109,7 @@ for instance_id in range(number_instances + 1):
         config['baseurl'] = f'http://{central_node_name}{hostname_suffix}'
         config['hostname'] = f'{central_node_name}{hostname_suffix}'
         config['email_site_admin'] = f"{admin_email_name}@{config['hostname']}"
+        config['email_orgadmin'] = f"{orgadmin_email_name}@{config['hostname']}"
         config['admin_orgname'] = central_node_org_name
     else:
         client_name = f'{prefix_client_node}{instance_id:0{width}}'
@@ -116,6 +117,7 @@ for instance_id in range(number_instances + 1):
         config['baseurl'] = f'http://{client_name}{hostname_suffix}'
         config['hostname'] = f'{client_name}{hostname_suffix}'
         config['email_site_admin'] = f"{admin_email_name}@{config['hostname']}"
+        config['email_orgadmin'] = f"{orgadmin_email_name}@{config['hostname']}"
         config['admin_orgname'] = f'{client_node_org_name_prefix}{instance_id:0{width}}'
 
     for_hostsfile += f"127.0.0.1    {config['hostname']}\n"
