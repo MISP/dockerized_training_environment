@@ -9,6 +9,7 @@ import shlex
 import os
 import random
 import string
+import yaml
 from generic_config import (internal_network_name, number_instances, central_node_name,
                             hostname_suffix, prefix_client_node, admin_email_name,
                             central_node_org_name, client_node_org_name_prefix)
@@ -16,40 +17,25 @@ from generic_config import (internal_network_name, number_instances, central_nod
 
 def prepare_docker_compose(path, http_port, https_port, hostname):
     with (path / 'docker-compose.yml').open() as f:
-        docker_content = f.read()
-    docker_content = docker_content.replace('80:80', f'{http_port}:80')
-    docker_content = docker_content.replace('443:443', f'{https_port}:443')
+        docker_content = yaml.safe_load(f.read())
+
+    docker_content['services']['misp']['ports'] = [f'{http_port}:80', f'{https_port}:443']
 
     # Add refresh script
-    if docker_content.find('misp-refresh') < 0:
+    if '../../misp-refresh:/var/www/MISP/misp-refresh/' not in docker_content['services']['misp']['volumes']:
         # Add misp-refresh
-        add_misp_refresh = """
-    volumes:
-      - "../../misp-refresh:/var/www/MISP/misp-refresh/"
-"""
-        docker_content = docker_content.replace('    volumes:', add_misp_refresh)
+        docker_content['services']['misp']['volumes'].append('../../misp-refresh:/var/www/MISP/misp-refresh/')
 
     # Add network configuration so all the containers are on the same
-    if docker_content.find('networks') < 0:
-        add_network = f"""
-      - "NOREDIR=true" #Do not redirect port 80
-      - "VIRTUAL_HOST={hostname}"
-    networks:
-      - default
-      - misp-test-sync
-"""
-        docker_content = docker_content.replace('#      - "NOREDIR=true" #Do not redirect port 80', add_network)
+    if not docker_content['services']['misp'].get('networks'):
+        docker_content['services']['misp']['environment'].append('NOREDIR=true')
+        docker_content['services']['misp']['environment'].append(f'VIRTUAL_HOST={hostname}')
+        docker_content['services']['misp']['networks'] = ['default', 'misp-test-sync']
 
-        add_external_network = f"""
-networks:
-    misp-test-sync:
-        external:
-            name: {internal_network_name}
-"""
-        docker_content += add_external_network
+        docker_content['networks'] = {'misp-test-sync': {'external': {'name': internal_network_name}}}
 
     with (path / 'docker-compose.yml').open('w') as f:
-        f.write(docker_content)
+        f.write(yaml.dump(docker_content, default_flow_style=False))
 
 
 def run_docker(path):

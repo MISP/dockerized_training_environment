@@ -8,6 +8,7 @@ authors = ["Raphaël Vinot <raphael@vinot.info>"]
 python = "^3.7"
 gitpython = "^3.1.0"
 pymisp = "^2.4.122"
+pyyaml = "^5.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
