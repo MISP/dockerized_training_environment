@@ -3,17 +3,17 @@
 import json
 from pathlib import Path
 from pymisp import ExpandedPyMISP, MISPOrganisation, MISPUser, MISPSharingGroup, MISPTag, MISPEvent
-from generic_config import central_node_name, prefix_client_node
 import random
 import string
+import csv
 
-misp_instances_dir = Path('misps')
+from generic_config import central_node_name, prefix_client_node
 
 
 class MISPInstance():
 
-    def __init__(self, node_id):
-        with (misp_instances_dir / node_id / 'config.json').open() as f:
+    def __init__(self, misp_instance_dir):
+        with (misp_instance_dir / 'config.json').open() as f:
             self.instance_config = json.load(f)
 
         print('Initialize', self.instance_config['admin_orgname'])
@@ -165,45 +165,71 @@ class MISPInstance():
                 raise Exception('Unable to find org admin')
 
 
-central_node = MISPInstance(central_node_name)
-central_node.create_org_admin()
+class MISPInstances():
 
-instances = []
+    central_node_name = central_node_name
+    prefix_client_node = prefix_client_node
 
-for path in misp_instances_dir.glob(f'{prefix_client_node}*'):
-    if path.name == central_node_name:
-        continue
-    instance = MISPInstance(path.name)
-    sync_server_config = central_node.create_sync_user(instance.host_org)
-    sync_server_config.name = f'Sync with {sync_server_config.url}'
-    instance.configure_sync(sync_server_config)
-    instance.create_org_admin()
-    instances.append(instance)
+    def __init__(self, root_misps: str='misps'):
+        self.misp_instances_dir = Path(root_misps)
+
+        self.central_node = MISPInstance(self.misp_instances_dir / self.central_node_name)
+        self.central_node.create_org_admin()
+
+        self.instances = []
+
+        # Initialize all instances to sync with central node
+        for path in self.misp_instances_dir.glob(f'{self.prefix_client_node}*'):
+            if path.name == self.central_node_name:
+                continue
+            instance = MISPInstance(path)
+            sync_server_config = self.central_node.create_sync_user(instance.host_org)
+            sync_server_config.name = f'Sync with {sync_server_config.url}'
+            instance.configure_sync(sync_server_config)
+            instance.create_org_admin()
+            self.instances.append(instance)
+
+    def test_sync(self, instance_id: int=0):
+        event = MISPEvent()
+        event.info = 'test sync'
+        event.add_tag('push_to_central')
+        event.add_attribute('ip-src', '8.8.8.8')
+        event.distribution = 4
+        event.SharingGroup = self.instances[instance_id].sharing_group
+
+        self.instances[instance_id].site_admin_connector.add_event(event)
+        self.instances[instance_id].site_admin_connector.publish(event)
+
+    def dump_all_auth(self):
+        auth = []
+        for instance in self.instances + [self.central_node]:
+            for user in instance.site_admin_connector.users():
+                if user.change_pw == '1':
+                    # Only change the password if the user never logged in.
+                    password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+                    instance.site_admin_connector.change_user_password(password, user)
+                else:
+                    password = 'Already changed by the user'
+                a = {'url': instance.baseurl, 'login': user.email, 'authkey': user.authkey,
+                     'password': password}
+                auth.append(a)
+
+        with (self.misp_instances_dir / 'auth.json').open('w') as f:
+            json.dump(auth, f, indent=2)
+
+        with (self.misp_instances_dir / 'auth.csv').open('w') as csvfile:
+            fieldnames = ['url', 'login', 'authkey', 'password']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            writer.writeheader()
+            for a in auth:
+                writer.writerow(a)
 
 
-def test_sync():
-    event = MISPEvent()
-    event.info = 'test sync'
-    event.add_tag('push_to_central')
-    event.add_attribute('ip-src', '8.8.8.8')
-    event.distribution = 4
-    event.SharingGroup = instances[0].sharing_group
-
-    instances[0].site_admin_connector.add_event(event)
-    instances[0].site_admin_connector.publish(event)
-
-
-auth = []
-for instance in instances + [central_node]:
-    for user in instance.site_admin_connector.users():
-        if user.change_pw == '1':
-            # Only change the password if the user never logged in.
-            password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
-            instance.site_admin_connector.change_user_password(password, user)
-        else:
-            password = 'Already changed by the user'
-        a = {'url': instance.baseurl, 'login': user.email, 'authkey': user.authkey,
-             'password': password}
-        auth.append(a)
-
-print(json.dumps(auth, indent=2))
+if __name__ == '__main__':
+    instances = MISPInstances()
+    instances.dump_all_auth()
+    with (instances.misp_instances_dir / 'auth.json').open() as f:
+        print(f.read())
+    with (instances.misp_instances_dir / 'auth.csv').open() as f:
+        print(f.read())
