@@ -145,8 +145,8 @@ class MISPInstance():
             sharing_group.name = 'Sharing group with central node'
             sharing_group.releasability = 'Training'
             self.sharing_group = self.site_admin_connector.add_sharing_group(sharing_group)
-            self.site_admin_connector.add_server_to_sharing_group(sharing_group, server)
-            self.site_admin_connector.add_org_to_sharing_group(sharing_group, server_sync_config.Organisation)
+            self.site_admin_connector.add_server_to_sharing_group(self.sharing_group, server)
+            self.site_admin_connector.add_org_to_sharing_group(self.sharing_group, server_sync_config.Organisation)
 
     def create_org_admin(self):
         # Create org admin (will be used during the exercise)

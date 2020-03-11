@@ -4,7 +4,7 @@
 internal_network_name = 'custom_misp_training_environment'
 
 # NOTE: There will be an extra instances (the central node), where all the client synchronize with (push)
-number_instances = 2
+number_instances = 10
 
 central_node_name = 'misp-central'
 prefix_client_node = 'misp-'

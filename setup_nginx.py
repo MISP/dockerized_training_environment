@@ -7,7 +7,6 @@ import yaml
 
 docker_compose_file = Path('nginx-proxy/docker-compose.yml')
 
-
 with docker_compose_file.open() as f:
     a = f.read()
     docker_content = yaml.safe_load(a)
@@ -18,6 +17,9 @@ if docker_content['version'] == '2':
 if not docker_content['services']['nginx-proxy'].get('networks'):
     docker_content['services']['nginx-proxy']['networks'] = ['default', 'misp-test-sync']
     docker_content['networks'] = {'misp-test-sync': {'external': {'name': internal_network_name}}}
+
+if Path('certs').exists() and '../certs:/etc/nginx/certs' not in docker_content['services']['nginx-proxy']['volumes']:
+    docker_content['services']['nginx-proxy']['volumes'].append('../certs:/etc/nginx/certs')
 
 with docker_compose_file.open('w') as f:
     f.write(yaml.dump(docker_content, default_flow_style=False))
