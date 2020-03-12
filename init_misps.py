@@ -13,13 +13,14 @@ import yaml
 
 from generic_config import (internal_network_name, number_instances, central_node_name,
                             hostname_suffix, prefix_client_node, admin_email_name, orgadmin_email_name,
-                            central_node_org_name, client_node_org_name_prefix)
+                            central_node_org_name, client_node_org_name_prefix, url_scheme)
 
 
 class MISPDocker():
 
-    def __init__(self, root_dir: Path, instance_id: int, instances_number_width: int):
+    def __init__(self, root_dir: Path, instance_id: int, instances_number_width: int, url_scheme: str):
         self.instance_id = instance_id
+        self.url_scheme = url_scheme
         self.config = {
             'http_port': f'80{self.instance_id}',
             'https_port': f'443{self.instance_id}',
@@ -28,7 +29,7 @@ class MISPDocker():
 
         if self.instance_id == 0:
             self.misp_docker_dir = root_dir / central_node_name
-            self.config['baseurl'] = f'http://{central_node_name}{hostname_suffix}'
+            self.config['baseurl'] = f'{url_scheme}://{central_node_name}{hostname_suffix}'
             self.config['hostname'] = f'{central_node_name}{hostname_suffix}'
             self.config['email_site_admin'] = f"{admin_email_name}@{self.config['hostname']}"
             self.config['email_orgadmin'] = f"{orgadmin_email_name}@{self.config['hostname']}"
@@ -37,7 +38,7 @@ class MISPDocker():
         else:
             client_name = f'{prefix_client_node}{instance_id:0{instances_number_width}}'
             self.misp_docker_dir = root_dir / client_name
-            self.config['baseurl'] = f'http://{client_name}{hostname_suffix}'
+            self.config['baseurl'] = f'{url_scheme}://{client_name}{hostname_suffix}'
             self.config['hostname'] = f'{client_name}{hostname_suffix}'
             self.config['email_site_admin'] = f"{admin_email_name}@{self.config['hostname']}"
             self.config['email_orgadmin'] = f"{orgadmin_email_name}@{self.config['hostname']}"
@@ -115,7 +116,7 @@ class MISPDocker():
         p = Popen(command, stdout=PIPE)
         ip = p.communicate()[0].decode().strip()
         os.chdir(cur_dir)
-        self.config['external_baseurl'] = f'http://{ip}'
+        self.config['external_baseurl'] = f'{self.url_scheme}://{ip}'
 
     def initial_misp_setup(self):
         cur_dir = os.getcwd()
@@ -154,6 +155,7 @@ class MISPDockerManager():
     orgadmin_email_name = orgadmin_email_name
     central_node_org_name = central_node_org_name
     client_node_org_name_prefix = client_node_org_name_prefix
+    url_scheme = url_scheme
 
     def __init__(self, root_misps: str='misps'):
         # Initialize all the repositories containing the docker images
@@ -180,7 +182,7 @@ class MISPDockerManager():
 
     def initialize_config_files(self):
         for instance_id in range(self.number_instances + 1):
-            misp_docker = MISPDocker(self.misp_instances_dir, instance_id, self.width)
+            misp_docker = MISPDocker(self.misp_instances_dir, instance_id, self.width, self.url_schema)
             self.misp_dockers.append(misp_docker)
 
     def run_dockers(self):
