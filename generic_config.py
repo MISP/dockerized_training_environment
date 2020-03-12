@@ -13,6 +13,7 @@ hostname_suffix = '.local'
 
 # #### Sync config
 
+secure_connection = False
 central_node_org_name = 'Central Node'
 client_node_org_name_prefix = 'Node '
 admin_email_name = 'admin'

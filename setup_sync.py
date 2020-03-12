@@ -2,23 +2,24 @@
 # -*- coding: utf-8 -*-
 import json
 from pathlib import Path
-from pymisp import ExpandedPyMISP, MISPOrganisation, MISPUser, MISPSharingGroup, MISPTag, MISPEvent
+from pymisp import PyMISP, MISPOrganisation, MISPUser, MISPSharingGroup, MISPTag, MISPEvent
 import random
 import string
 import csv
 
-from generic_config import central_node_name, prefix_client_node
+from generic_config import central_node_name, prefix_client_node, secure_connection
 
 
 class MISPInstance():
 
-    def __init__(self, misp_instance_dir):
+    def __init__(self, misp_instance_dir, secure_connection):
         with (misp_instance_dir / 'config.json').open() as f:
             self.instance_config = json.load(f)
 
         print('Initialize', self.instance_config['admin_orgname'])
+        self.secure_connection = secure_connection
 
-        self.initial_user_connector = ExpandedPyMISP(self.instance_config['baseurl'], self.instance_config['admin_key'], ssl=False, debug=False)
+        self.initial_user_connector = PyMISP(self.instance_config['baseurl'], self.instance_config['admin_key'], ssl=self.secure_connection, debug=False)
         # Set the default role (id 3 is normal user)
         self.initial_user_connector.set_default_role(3)
         self.initial_user_connector.toggle_global_pythonify()
@@ -55,7 +56,7 @@ class MISPInstance():
             else:
                 raise Exception('Unable to find admin user')
 
-        self.site_admin_connector = ExpandedPyMISP(self.baseurl, self.host_site_admin.authkey, ssl=False, debug=False)
+        self.site_admin_connector = PyMISP(self.baseurl, self.host_site_admin.authkey, ssl=self.secure_connection, debug=False)
         self.site_admin_connector.toggle_global_pythonify()
 
         # Setup external_baseurl
@@ -96,7 +97,7 @@ class MISPInstance():
             else:
                 raise Exception('Unable to find sync user')
 
-        sync_user_connector = ExpandedPyMISP(self.site_admin_connector.root_url, sync_user.authkey, ssl=False, debug=False)
+        sync_user_connector = PyMISP(self.site_admin_connector.root_url, sync_user.authkey, ssl=self.secure_connection, debug=False)
         return sync_user_connector.get_sync_config(pythonify=True)
 
     def configure_sync(self, server_sync_config):
@@ -169,11 +170,12 @@ class MISPInstances():
 
     central_node_name = central_node_name
     prefix_client_node = prefix_client_node
+    secure_connection = secure_connection
 
     def __init__(self, root_misps: str='misps'):
         self.misp_instances_dir = Path(root_misps)
 
-        self.central_node = MISPInstance(self.misp_instances_dir / self.central_node_name)
+        self.central_node = MISPInstance(self.misp_instances_dir / self.central_node_name, self.secure_connection)
         self.central_node.create_org_admin()
 
         self.instances = []
@@ -182,7 +184,7 @@ class MISPInstances():
         for path in self.misp_instances_dir.glob(f'{self.prefix_client_node}*'):
             if path.name == self.central_node_name:
                 continue
-            instance = MISPInstance(path)
+            instance = MISPInstance(path, self.secure_connection)
             sync_server_config = self.central_node.create_sync_user(instance.host_org)
             sync_server_config.name = f'Sync with {sync_server_config.url}'
             instance.configure_sync(sync_server_config)
