@@ -33,7 +33,7 @@ class MISPDocker():
             self.config['email_site_admin'] = f"{admin_email_name}@{self.config['hostname']}"
             self.config['email_orgadmin'] = f"{orgadmin_email_name}@{self.config['hostname']}"
             self.config['admin_orgname'] = central_node_org_name
-            self.config['certname'] = f'{hostname_suffix}'
+            self.config['certname'] = f'{hostname_suffix}'.lstrip('.')
         else:
             client_name = f'{prefix_client_node}{instance_id:0{instances_number_width}}'
             self.misp_docker_dir = root_dir / client_name
