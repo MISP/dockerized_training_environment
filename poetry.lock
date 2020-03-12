@@ -317,7 +317,7 @@ description = "Python API for MISP."
 name = "pymisp"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "2.4.122"
+version = "2.4.123"
 
 [package.dependencies]
 deprecated = ">=1.2.7,<2.0.0"
@@ -602,8 +602,8 @@ pygments = [
     {file = "Pygments-2.6.1.tar.gz", hash = "sha256:647344a061c249a3b74e230c739f434d7ea4d8b1d5f3721bc0f3558049b38f44"},
 ]
 pymisp = [
-    {file = "pymisp-2.4.122-py3-none-any.whl", hash = "sha256:17cf862c1c4020d32292165500f7a1a281f400e21a9d18a9a01a84a002677b84"},
-    {file = "pymisp-2.4.122.tar.gz", hash = "sha256:ecdc362b4bb5dd500a5f0b9e795b35ed75037de64f8dcf39c24d029e7657ad7f"},
+    {file = "pymisp-2.4.123-py3-none-any.whl", hash = "sha256:318cb9cee371ce3918b3216e2c1a61938747203f89f9d42d4e4a51b40066f9b3"},
+    {file = "pymisp-2.4.123.tar.gz", hash = "sha256:1d27bc81ed492b5e6e216d099dcadf943d5c0c09457d6464ed33db8da39d0fdd"},
 ]
 pyparsing = [
     {file = "pyparsing-2.4.6-py2.py3-none-any.whl", hash = "sha256:c342dccb5250c08d45fd6f8b4a559613ca603b57498511740e65cd11a2e7dcec"},
