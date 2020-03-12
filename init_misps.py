@@ -182,7 +182,7 @@ class MISPDockerManager():
 
     def initialize_config_files(self):
         for instance_id in range(self.number_instances + 1):
-            misp_docker = MISPDocker(self.misp_instances_dir, instance_id, self.width, self.url_schema)
+            misp_docker = MISPDocker(self.misp_instances_dir, instance_id, self.width, self.url_scheme)
             self.misp_dockers.append(misp_docker)
 
     def run_dockers(self):
