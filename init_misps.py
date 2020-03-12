@@ -116,7 +116,7 @@ class MISPDocker():
         p = Popen(command, stdout=PIPE)
         ip = p.communicate()[0].decode().strip()
         os.chdir(cur_dir)
-        self.config['external_baseurl'] = f'{self.url_scheme}://{ip}'
+        self.config['external_baseurl'] = f'http://{ip}'
 
     def initial_misp_setup(self):
         cur_dir = os.getcwd()
