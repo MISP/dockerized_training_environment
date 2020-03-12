@@ -33,6 +33,7 @@ class MISPDocker():
             self.config['email_site_admin'] = f"{admin_email_name}@{self.config['hostname']}"
             self.config['email_orgadmin'] = f"{orgadmin_email_name}@{self.config['hostname']}"
             self.config['admin_orgname'] = central_node_org_name
+            self.config['certname'] = f'{hostname_suffix}'
         else:
             client_name = f'{prefix_client_node}{instance_id:0{instances_number_width}}'
             self.misp_docker_dir = root_dir / client_name
@@ -41,6 +42,7 @@ class MISPDocker():
             self.config['email_site_admin'] = f"{admin_email_name}@{self.config['hostname']}"
             self.config['email_orgadmin'] = f"{orgadmin_email_name}@{self.config['hostname']}"
             self.config['admin_orgname'] = f'{client_node_org_name_prefix}{instance_id:0{instances_number_width}}'
+            self.config['certname'] = f'{instance_id:0{instances_number_width}}{hostname_suffix}'
 
         if self.misp_docker_dir.exists():
             self.instance_repo = git.Repo(self.misp_docker_dir)
@@ -71,6 +73,7 @@ class MISPDocker():
         if not docker_content['services']['misp'].get('networks'):
             docker_content['services']['misp']['environment'].append('NOREDIR=true')
             docker_content['services']['misp']['environment'].append(f'VIRTUAL_HOST={self.config["hostname"]}')
+            docker_content['services']['misp']['environment'].append(f'CERT_NAME={self.config["certname"]}')
             docker_content['services']['misp']['networks'] = ['default', 'misp-test-sync']
 
             docker_content['networks'] = {'misp-test-sync': {'external': {'name': internal_network_name}}}
