@@ -43,11 +43,12 @@ class MISPDocker():
             self.config['email_site_admin'] = f"{admin_email_name}@{self.config['hostname']}"
             self.config['email_orgadmin'] = f"{orgadmin_email_name}@{self.config['hostname']}"
             self.config['admin_orgname'] = f'{client_node_org_name_prefix}{instance_id:0{instances_number_width}}'
-            self.config['certname'] = f'{instance_id:0{instances_number_width}}{hostname_suffix}'
+            self.config['certname'] = f'{hostname_suffix[1:]}'  # get rid of the .
 
         if self.misp_docker_dir.exists():
             self.instance_repo = git.Repo(self.misp_docker_dir)
             self.instance_repo.git.checkout('docker-compose.yml')
+            self.instance_repo.git.checkout('.env')
             self.instance_repo.remote('origin').pull()
         else:
             self.instance_repo = git.repo.base.Repo.clone_from('https://github.com/coolacid/docker-misp.git', str(self.misp_docker_dir))
@@ -72,18 +73,47 @@ class MISPDocker():
 
         # Add network configuration so all the containers are on the same
         if not docker_content['services']['misp'].get('networks'):
-            docker_content['services']['misp']['environment'].append('NOREDIR=true')
-            docker_content['services']['misp']['environment'].append(f'VIRTUAL_HOST={self.config["hostname"]}')
-            docker_content['services']['misp']['environment'].append(f'CERT_NAME={self.config["certname"]}')
+            # Setup the environment variables
+            environment = ['NOREDIR=true',
+                           f'VIRTUAL_HOST={self.config["hostname"]}',
+                           f'CERT_NAME={self.config["certname"]}',
+                           f'HOSTNAME={self.config["hostname"]}']
+            for e in docker_content['services']['misp'].pop('environment'):
+                if e.startswith('HOSTNAME'):
+                    # get rid of this one
+                    continue
+                # Keep the other ones
+                environment.append(e)
+            docker_content['services']['misp']['environment'] = environment
+
             docker_content['services']['misp']['networks'] = ['default', 'misp-test-sync']
 
             docker_content['networks'] = {'misp-test-sync': {'external': {'name': internal_network_name}}}
 
+            # do not bother with the modules
+            docker_content['services'].pop('misp-modules')
+
         with (self.misp_docker_dir / 'docker-compose.yml').open('w') as f:
             f.write(yaml.dump(docker_content, default_flow_style=False))
 
+        # change MISP_TAG to use the HEAD
+        env = []
+        with (self.misp_docker_dir / '.env').open('r') as _env:
+            for var in _env.readlines():
+                if var.startswith("MISP_TAG"):
+                    env.append("MISP_TAG=develop")
+                else:
+                    env.append(var)
+
+        with (self.misp_docker_dir / '.env').open('w') as _env:
+            _env.write('\n'.join(env))
+
         cur_dir = os.getcwd()
         os.chdir(self.misp_docker_dir)
+        # check env
+        command = shlex.split('sudo cat ./.env')
+        p = Popen(command)
+        p.wait()
         # Build the dockers
         command = shlex.split('sudo docker-compose -f docker-compose.yml -f build-docker-compose.yml build')
         p = Popen(command)
@@ -138,7 +168,7 @@ class MISPDocker():
         p = Popen(command)
         p.wait()
         # Turn the instance live
-        command = shlex.split(f'sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake live 1')
+        command = shlex.split('sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake live 1')
         p = Popen(command)
         p.wait()
         os.chdir(cur_dir)

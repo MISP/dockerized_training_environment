@@ -20,6 +20,7 @@ class MISPInstance():
         self.secure_connection = secure_connection
 
         self.initial_user_connector = PyMISP(self.instance_config['baseurl'], self.instance_config['admin_key'], ssl=self.secure_connection, debug=False)
+        self.initial_user_connector.update_misp()
         # Set the default role (id 3 is normal user)
         self.initial_user_connector.set_default_role(3)
         self.initial_user_connector.toggle_global_pythonify()
@@ -209,7 +210,7 @@ class MISPInstances():
                 if user.change_pw == '1':
                     # Only change the password if the user never logged in.
                     password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
-                    instance.site_admin_connector.change_user_password(password, user)
+                    user = instance.site_admin_connector.update_user({'password': password}, user.id)
                 else:
                     password = 'Already changed by the user'
                 a = {'url': instance.baseurl, 'login': user.email, 'authkey': user.authkey,
