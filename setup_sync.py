@@ -174,7 +174,8 @@ class MISPInstances():
     secure_connection = secure_connection
 
     def __init__(self, root_misps: str='misps'):
-        self.misp_instances_dir = Path(root_misps)
+        self.misp_instances_dir = Path(__file__).resolve().parent / root_misps
+        print('MISP instances direcotry:', self.misp_instances_dir)
 
         self.central_node = MISPInstance(self.misp_instances_dir / self.central_node_name, self.secure_connection)
         self.central_node.create_org_admin()

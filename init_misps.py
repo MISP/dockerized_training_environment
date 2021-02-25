@@ -122,6 +122,7 @@ class MISPDocker():
         os.chdir(cur_dir)
 
     def dump_config(self):
+        print(json.dumps(self.config, indent=2))
         with (self.misp_docker_dir / 'config.json').open('w') as f:
             json.dump(self.config, f, indent=2)
 
@@ -194,7 +195,8 @@ class MISPDockerManager():
 
     def __init__(self, root_misps: str='misps'):
         # Initialize all the repositories containing the docker images
-        self.misp_instances_dir = Path(root_misps)
+        self.misp_instances_dir = Path(__file__).resolve().parent / root_misps
+        print("MISP instances directory:", self.misp_instances_dir)
         self.misp_instances_dir.mkdir(exist_ok=True)
         self.master_repo = git.Repo('.')
         self.width = len(str(self.number_instances))
