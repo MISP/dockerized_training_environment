@@ -114,11 +114,11 @@ class MISPDocker():
         os.chdir(self.misp_docker_dir)
         # check env
         command = shlex.split('sudo cat ./.env')
-        p = Popen(command)
+        p = Popen(command, stdout=PIPE)
         p.wait()
         # Build the dockers
         command = shlex.split('sudo docker-compose -f docker-compose.yml -f build-docker-compose.yml build')
-        p = Popen(command)
+        p = Popen(command, stdout=PIPE)
         p.wait()
         os.chdir(cur_dir)
 
@@ -136,7 +136,7 @@ class MISPDocker():
         os.chdir(self.misp_docker_dir)
         # Run the dockers
         command = shlex.split('sudo docker-compose up -d')
-        p = Popen(command)
+        p = Popen(command, stdout=PIPE)
         p.wait()
         # Get IP on docker
         # # Get thing to inspect
@@ -156,31 +156,31 @@ class MISPDocker():
         os.chdir(self.misp_docker_dir)
         # Init admin user
         command = shlex.split('sudo docker-compose exec misp /bin/bash /var/www/MISP/app/Console/cake userInit')
-        p = Popen(command)
+        p = Popen(command, stdout=PIPE)
         p.wait()
         # Set baseurl
         command = shlex.split(f'sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake baseurl {self.config["baseurl"]}')
-        p = Popen(command)
+        p = Popen(command, stdout=PIPE)
         p.wait()
         # Run DB updates
         command = shlex.split('sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin runUpdates')
-        p = Popen(command)
+        p = Popen(command, stdout=PIPE)
         p.wait()
         # Make sure the updates are all done
         command = shlex.split('sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin updatesDone 1')
-        p = Popen(command)
+        p = Popen(command, stdout=PIPE)
         p.wait()
         # Set the admin password
         command = shlex.split(f'sudo docker-compose exec misp /bin/bash /var/www/MISP/app/Console/cake Password admin@admin.test {self.config["admin_key"]}')
-        p = Popen(command)
+        p = Popen(command, stdout=PIPE)
         p.wait()
         # Set the admin key
         command = shlex.split(f'sudo docker-compose exec misp /bin/bash /var/www/MISP/app/Console/cake admin change_authkey admin@admin.test {self.config["admin_key"]}')
-        p = Popen(command)
+        p = Popen(command, stdout=PIPE)
         p.wait()
         # Turn the instance live
         command = shlex.split('sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake live 1')
-        p = Popen(command)
+        p = Popen(command, stdout=PIPE)
         p.wait()
         os.chdir(cur_dir)
 
@@ -212,7 +212,7 @@ class MISPDockerManager():
     def _create_docker_internal_network(self):
         # Initialize network (does nothing if already existing)
         command = shlex.split(f'sudo docker network create {self.internal_network_name}')
-        p = Popen(command)
+        p = Popen(command, stdout=PIPE)
         p.wait()
 
     @property
