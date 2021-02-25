@@ -77,7 +77,8 @@ class MISPDocker():
             environment = ['NOREDIR=true',
                            f'VIRTUAL_HOST={self.config["hostname"]}',
                            f'CERT_NAME={self.config["certname"]}',
-                           f'HOSTNAME={self.config["hostname"]}']
+                           f'HOSTNAME={self.config["hostname"]}',
+                           'SECURESSL=true']
             for e in docker_content['services']['misp'].pop('environment'):
                 if e.startswith('HOSTNAME'):
                     # get rid of this one
