@@ -114,12 +114,12 @@ class MISPDocker():
         os.chdir(self.misp_docker_dir)
         # check env
         command = shlex.split('sudo cat ./.env')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
         print(p.communicate())
         # Build the dockers
         command = shlex.split('sudo docker-compose -f docker-compose.yml -f build-docker-compose.yml build')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
         print(p.communicate())
         os.chdir(cur_dir)
@@ -138,18 +138,18 @@ class MISPDocker():
         os.chdir(self.misp_docker_dir)
         # Run the dockers
         command = shlex.split('sudo docker-compose up -d')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
         print(p.communicate())
         # Get IP on docker
         # # Get thing to inspect
         command = shlex.split('sudo docker-compose ps -q misp')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         thing = p.communicate()[0].decode().strip()
         # Yes, 4 {, we need 2 in the output string
         command = shlex.split(f'sudo docker inspect -f "{{{{.NetworkSettings.Networks.{internal_network_name}.IPAddress}}}}"')
         command.append(thing)
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         ip = p.communicate()[0].decode().strip()
         os.chdir(cur_dir)
         self.config['external_baseurl'] = f'http://{ip}'
@@ -159,37 +159,37 @@ class MISPDocker():
         os.chdir(self.misp_docker_dir)
         # Init admin user
         command = shlex.split('sudo docker-compose exec misp /bin/bash /var/www/MISP/app/Console/cake userInit')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
         print(p.communicate())
         # Set baseurl
         command = shlex.split(f'sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake baseurl {self.config["baseurl"]}')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
         print(p.communicate())
         # Run DB updates
         command = shlex.split('sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin runUpdates')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
         print(p.communicate())
         # Make sure the updates are all done
         command = shlex.split('sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin updatesDone 1')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
         print(p.communicate())
         # Set the admin password
         command = shlex.split(f'sudo docker-compose exec misp /bin/bash /var/www/MISP/app/Console/cake Password admin@admin.test {self.config["admin_key"]}')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
         print(p.communicate())
         # Set the admin key
         command = shlex.split(f'sudo docker-compose exec misp /bin/bash /var/www/MISP/app/Console/cake admin change_authkey admin@admin.test {self.config["admin_key"]}')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
         print(p.communicate())
         # Turn the instance live
         command = shlex.split('sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake live 1')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
         print(p.communicate())
         os.chdir(cur_dir)
@@ -222,7 +222,7 @@ class MISPDockerManager():
     def _create_docker_internal_network(self):
         # Initialize network (does nothing if already existing)
         command = shlex.split(f'sudo docker network create {self.internal_network_name}')
-        p = Popen(command, stdout=PIPE)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
         print(p.communicate())
 
