@@ -164,6 +164,10 @@ class MISPDocker():
         command = shlex.split('sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin runUpdates')
         p = Popen(command)
         p.wait()
+        # Make sure the updates are all done
+        command = shlex.split('sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake updatesDone 1')
+        p = Popen(command)
+        p.wait()
         # Set the admin key
         command = shlex.split(f'sudo docker-compose exec misp /bin/bash /var/www/MISP/app/Console/cake admin change_authkey admin@admin.test {self.config["admin_key"]}')
         p = Popen(command)
