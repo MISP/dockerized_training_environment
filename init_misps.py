@@ -53,6 +53,7 @@ class MISPDocker():
         else:
             self.instance_repo = git.repo.base.Repo.clone_from('https://github.com/coolacid/docker-misp.git', str(self.misp_docker_dir))
 
+        print("Docker path", self.misp_docker_dir, instance_id)
         self._prepare_docker_compose()
 
     @property
