@@ -114,15 +114,21 @@ class MISPDocker():
         os.chdir(self.misp_docker_dir)
         # check env
         command = shlex.split('sudo cat ./.env')
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        p.wait()
-        print(p.communicate())
+        self._print_output(command)
         # Build the dockers
         command = shlex.split('sudo docker-compose -f docker-compose.yml -f build-docker-compose.yml build')
+        self._print_output(command)
+        os.chdir(cur_dir)
+
+    def _print_output(self, command):
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         p.wait()
-        print(p.communicate())
-        os.chdir(cur_dir)
+        out, err = p.communicate()
+        print(command)
+        if out:
+            print('stdout:', out)
+        if err:
+            print('stderr:', err)
 
     def dump_config(self):
         print(json.dumps(self.config, indent=2))
@@ -138,9 +144,7 @@ class MISPDocker():
         os.chdir(self.misp_docker_dir)
         # Run the dockers
         command = shlex.split('sudo docker-compose up -d')
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        p.wait()
-        print(p.communicate())
+        self._print_output(command)
         # Get IP on docker
         # # Get thing to inspect
         command = shlex.split('sudo docker-compose ps -q misp')
@@ -159,39 +163,25 @@ class MISPDocker():
         os.chdir(self.misp_docker_dir)
         # Init admin user
         command = shlex.split('sudo docker-compose exec -T misp /bin/bash /var/www/MISP/app/Console/cake userInit')
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        p.wait()
-        print(p.communicate())
+        self._print_output(command)
         # Set baseurl
         command = shlex.split(f'sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake baseurl {self.config["baseurl"]}')
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        p.wait()
-        print(p.communicate())
+        self._print_output(command)
         # Run DB updates
         command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin runUpdates')
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        p.wait()
-        print(p.communicate())
+        self._print_output(command)
         # Make sure the updates are all done
         command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin updatesDone 1')
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        p.wait()
-        print(p.communicate())
+        self._print_output(command)
         # Set the admin password
         command = shlex.split(f'sudo docker-compose exec -T misp /bin/bash /var/www/MISP/app/Console/cake Password admin@admin.test {self.config["admin_key"]}')
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        p.wait()
-        print(p.communicate())
+        self._print_output(command)
         # Set the admin key
         command = shlex.split(f'sudo docker-compose exec -T misp /bin/bash /var/www/MISP/app/Console/cake admin change_authkey admin@admin.test {self.config["admin_key"]}')
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        p.wait()
-        print(p.communicate())
+        self._print_output(command)
         # Turn the instance live
         command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake live 1')
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        p.wait()
-        print(p.communicate())
+        self._print_output(command)
         os.chdir(cur_dir)
 
 
@@ -222,9 +212,7 @@ class MISPDockerManager():
     def _create_docker_internal_network(self):
         # Initialize network (does nothing if already existing)
         command = shlex.split(f'sudo docker network create {self.internal_network_name}')
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        p.wait()
-        print(p.communicate())
+        self._print_output(command)
 
     @property
     def hostsfile(self) -> str:
