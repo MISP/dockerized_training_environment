@@ -127,7 +127,8 @@ class MISPDocker():
         _print_output(command)
         # Build the dockers
         command = shlex.split('sudo docker-compose -f docker-compose.yml -f build-docker-compose.yml build')
-        _print_output(command)
+        p = Popen(command)
+        p.wait()
         os.chdir(cur_dir)
 
     def dump_config(self):
