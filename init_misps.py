@@ -165,7 +165,7 @@ class MISPDocker():
         p = Popen(command)
         p.wait()
         # Make sure the updates are all done
-        command = shlex.split('sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake updatesDone 1')
+        command = shlex.split('sudo docker-compose exec --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin updatesDone 1')
         p = Popen(command)
         p.wait()
         # Set the admin key
