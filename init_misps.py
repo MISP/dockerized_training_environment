@@ -18,13 +18,12 @@ from generic_config import (internal_network_name, number_instances, central_nod
 
 def _print_output(command):
     p = Popen(command, stdout=PIPE, stderr=PIPE)
-    p.wait()
     out, err = p.communicate()
     print(command)
     if out:
-        print('stdout:', out)
+        print('stdout:', out.decode())
     if err:
-        print('stderr:', err)
+        print('stderr:', err.decode())
 
 
 class MISPDocker():
