@@ -163,7 +163,7 @@ class MISPDocker():
         cur_dir = os.getcwd()
         os.chdir(self.misp_docker_dir)
         # Init admin user
-        command = shlex.split('sudo docker-compose exec -T misp /bin/bash /var/www/MISP/app/Console/cake userInit')
+        command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake userInit')
         _print_output(command)
         # Set baseurl
         command = shlex.split(f'sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake baseurl {self.config["baseurl"]}')
@@ -175,10 +175,10 @@ class MISPDocker():
         command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin updatesDone 1')
         _print_output(command)
         # Set the admin password
-        command = shlex.split(f'sudo docker-compose exec -T misp /bin/bash /var/www/MISP/app/Console/cake Password admin@admin.test {self.config["admin_key"]}')
+        command = shlex.split(f'sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Password admin@admin.test {self.config["admin_key"]}')
         _print_output(command)
         # Set the admin key
-        command = shlex.split(f'sudo docker-compose exec -T misp /bin/bash /var/www/MISP/app/Console/cake admin change_authkey admin@admin.test {self.config["admin_key"]}')
+        command = shlex.split(f'sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake admin change_authkey admin@admin.test {self.config["admin_key"]}')
         _print_output(command)
         # Turn the instance live
         command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake live 1')
