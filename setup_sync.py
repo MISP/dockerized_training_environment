@@ -75,13 +75,13 @@ class MISPInstance():
         sync_org = self.site_admin_connector.add_organisation(organisation)
         if not isinstance(sync_org, MISPOrganisation):
             # The organisation is probably already there
-            organisations = self.initial_user_connector.organisations()
+            organisations = self.initial_user_connector.organisations(scope='all')
             for org in organisations:
                 if org.name == organisation.name:
                     sync_org = org
                     break
             else:
-                raise Exception('Unable to find sync organisation')
+                raise Exception(f'Unable to find sync organisation: {organisation.name}')
 
         email = f"sync_user@{hostname}"
         user = MISPUser()
@@ -101,7 +101,7 @@ class MISPInstance():
         sync_user_connector = PyMISP(self.site_admin_connector.root_url, sync_user.authkey, ssl=self.secure_connection, debug=False)
         return sync_user_connector.get_sync_config(pythonify=True)
 
-    def configure_sync(self, server_sync_config):
+    def configure_sync(self, server_sync_config, from_central_node=False):
         # Add sharing server
         for s in self.site_admin_connector.servers():
             if s.name == server_sync_config.name:
@@ -118,7 +118,10 @@ class MISPInstance():
 
         # Add tag to limit pull
         tag_pull = MISPTag()
-        tag_pull.name = tag_central_to_nodes
+        if from_central_node:
+            tag_pull.name = tag_nodes_to_central
+        else:
+            tag_pull.name = tag_central_to_nodes
         tag_pull.exportable = False
         tag_pull.org_id = self.host_org.id
         tag_pull = self.site_admin_connector.add_tag(tag_pull)
@@ -132,7 +135,10 @@ class MISPInstance():
 
         # Add tag to limit push
         tag_push = MISPTag()
-        tag_push.name = tag_nodes_to_central
+        if from_central_node:
+            tag_push.name = tag_central_to_nodes
+        else:
+            tag_push.name = tag_nodes_to_central
         tag_push.exportable = False
         tag_push.org_id = self.host_org.id
         tag_push = self.site_admin_connector.add_tag(tag_push)
@@ -211,7 +217,7 @@ class MISPInstances():
             # Initialize sync central node to child
             central_node_sync_config = instance.create_sync_user(self.central_node.host_org, self.central_node.hostname)
             central_node_sync_config.name = f'Sync with {central_node_sync_config.Organisation["name"]}'
-            self.central_node.configure_sync(central_node_sync_config)
+            self.central_node.configure_sync(central_node_sync_config, from_central_node=True)
 
     def test_sync(self, instance_id: int=0):
         event = MISPEvent()
