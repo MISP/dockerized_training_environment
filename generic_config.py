@@ -18,3 +18,6 @@ central_node_org_name = 'Central Node'
 client_node_org_name_prefix = 'Node '
 admin_email_name = 'admin'
 orgadmin_email_name = 'orgadmin'
+
+tag_central_to_nodes = 'push_to_nodes'
+tag_nodes_to_central = 'push_to_central'

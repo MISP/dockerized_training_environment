@@ -7,7 +7,7 @@ import random
 import string
 import csv
 
-from generic_config import central_node_name, prefix_client_node, secure_connection
+from generic_config import central_node_name, prefix_client_node, secure_connection, tag_central_to_nodes, tag_nodes_to_central
 
 
 class MISPInstance():
@@ -27,6 +27,7 @@ class MISPInstance():
 
         self.baseurl = self.instance_config['baseurl']
         self.external_baseurl = self.instance_config['external_baseurl']
+        self.hostname = self.instance_config['hostname']
 
         # Create organisation
         organisation = MISPOrganisation()
@@ -70,7 +71,7 @@ class MISPInstance():
     def __repr__(self):
         return f'<{self.__class__.__name__}(external={self.baseurl})>'
 
-    def create_sync_user(self, organisation):
+    def create_sync_user(self, organisation, hostname):
         sync_org = self.site_admin_connector.add_organisation(organisation)
         if not isinstance(sync_org, MISPOrganisation):
             # The organisation is probably already there
@@ -82,8 +83,7 @@ class MISPInstance():
             else:
                 raise Exception('Unable to find sync organisation')
 
-        short_org_name = sync_org.name.lower().replace(' ', '-')
-        email = f"sync_user@{short_org_name}.local"
+        email = f"sync_user@{hostname}"
         user = MISPUser()
         user.email = email
         user.org_id = sync_org.id
@@ -116,35 +116,51 @@ class MISPInstance():
         if r['status'] != 1:
             raise Exception(f'Sync test failed: {r}')
 
-        # Add tag to limit push
-        tag = MISPTag()
-        tag.name = 'push_to_central'
-        tag.exportable = False
-        tag.org_id = self.host_org.id
-        tag = self.site_admin_connector.add_tag(tag)
-        if not isinstance(tag, MISPTag):
+        # Add tag to limit pull
+        tag_pull = MISPTag()
+        tag_pull.name = tag_central_to_nodes
+        tag_pull.exportable = False
+        tag_pull.org_id = self.host_org.id
+        tag_pull = self.site_admin_connector.add_tag(tag_pull)
+        if not isinstance(tag_pull, MISPTag):
             for t in self.site_admin_connector.tags():
-                if t.name == 'push_to_central':
-                    tag = t
+                if t.name == tag_nodes_to_central:
+                    tag_pull = t
                     break
             else:
-                raise Exception('Unable to find tag')
+                raise Exception(f'Unable to find tag {tag_central_to_nodes}')
+
+        # Add tag to limit push
+        tag_push = MISPTag()
+        tag_push.name = tag_nodes_to_central
+        tag_push.exportable = False
+        tag_push.org_id = self.host_org.id
+        tag_push = self.site_admin_connector.add_tag(tag_push)
+        if not isinstance(tag_push, MISPTag):
+            for t in self.site_admin_connector.tags():
+                if t.name == tag_nodes_to_central:
+                    tag_push = t
+                    break
+            else:
+                raise Exception(f'Unable to find tag {tag_nodes_to_central}')
 
         # Set limit on sync config
-        filter_tag_push = {"tags": {'OR': [tag.id], 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
-        # filter_tag_pull = {"tags": {'OR': [], 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
+        # # Push
+        filter_tag_push = {"tags": {'OR': [tag_push.id], 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
         server.push_rules = json.dumps(filter_tag_push)
-        # server.pull_rules = json.dumps(filter_tag_pull)
+        # # Pull
+        filter_tag_pull = {"tags": {'OR': [tag_pull.id], 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
+        server.pull_rules = json.dumps(filter_tag_pull)
         server = self.site_admin_connector.update_server(server)
 
         # Add sharing group
         for sg in self.site_admin_connector.sharing_groups():
-            if sg.name == 'Sharing group with central node':
+            if sg.name == f'Sharing group with {server_sync_config.Organisation["name"]}':
                 self.sharing_group = sg
                 break
         else:
             sharing_group = MISPSharingGroup()
-            sharing_group.name = 'Sharing group with central node'
+            sharing_group.name = f'Sharing group with {server_sync_config.Organisation["name"]}'
             sharing_group.releasability = 'Training'
             self.sharing_group = self.site_admin_connector.add_sharing_group(sharing_group)
             self.site_admin_connector.add_server_to_sharing_group(self.sharing_group, server)
@@ -187,16 +203,20 @@ class MISPInstances():
             if path.name == self.central_node_name:
                 continue
             instance = MISPInstance(path, self.secure_connection)
-            sync_server_config = self.central_node.create_sync_user(instance.host_org)
-            sync_server_config.name = f'Sync with {sync_server_config.url}'
+            sync_server_config = self.central_node.create_sync_user(instance.host_org, instance.hostname)
+            sync_server_config.name = f'Sync with {sync_server_config.Organisation["name"]}'
             instance.configure_sync(sync_server_config)
             instance.create_org_admin()
             self.instances.append(instance)
+            # Initialize sync central node to child
+            central_node_sync_config = instance.create_sync_user(self.central_node.host_org, self.central_node.hostname)
+            central_node_sync_config.name = f'Sync with {central_node_sync_config.Organisation["name"]}'
+            self.central_node.configure_sync(central_node_sync_config)
 
     def test_sync(self, instance_id: int=0):
         event = MISPEvent()
         event.info = 'test sync'
-        event.add_tag('push_to_central')
+        event.add_tag(tag_nodes_to_central)
         event.add_attribute('ip-src', '8.8.8.8')
         event.distribution = 4
         event.SharingGroup = self.instances[instance_id].sharing_group
