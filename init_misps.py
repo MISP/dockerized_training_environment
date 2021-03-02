@@ -83,12 +83,12 @@ class MISPDocker():
             docker_content['services']['misp']['volumes'].append('../../misp-refresh:/var/www/MISP/misp-refresh/')
 
         # Add user defined objects
-        user_defined_objects_path = Path('../../objects')
+        user_defined_objects_path = Path('objects')
         if user_defined_objects_path.exists():
             for obj_dir in user_defined_objects_path.glob('*'):
                 if not obj_dir.is_dir():
                     continue
-                to_append = f'{obj_dir}:/var/www/MISP/app/files/misp-objects/objects/{obj_dir.name}'
+                to_append = f'../../{obj_dir}:/var/www/MISP/app/files/misp-objects/objects/{obj_dir.name}'
                 if to_append not in docker_content['services']['misp']['volumes']:
                     docker_content['services']['misp']['volumes'].append(to_append)
 
