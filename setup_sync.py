@@ -116,46 +116,39 @@ class MISPInstance():
         if r['status'] != 1:
             raise Exception(f'Sync test failed: {r}')
 
-        # Add tag to limit pull
-        tag_pull = MISPTag()
         if from_central_node:
-            tag_pull.name = tag_nodes_to_central
+            pull_to_create = tag_nodes_to_central
+            push_to_create = tag_central_to_nodes
         else:
-            tag_pull.name = tag_central_to_nodes
-        tag_pull.exportable = False
-        tag_pull.org_id = self.host_org.id
-        tag_pull = self.site_admin_connector.add_tag(tag_pull)
-        if not isinstance(tag_pull, MISPTag):
-            for t in self.site_admin_connector.tags():
-                if t.name == tag_nodes_to_central:
-                    tag_pull = t
-                    break
-            else:
-                raise Exception(f'Unable to find tag {tag_central_to_nodes}')
+            pull_to_create = tag_central_to_nodes
+            push_to_create = tag_nodes_to_central
 
-        # Add tag to limit push
-        tag_push = MISPTag()
-        if from_central_node:
-            tag_push.name = tag_central_to_nodes
-        else:
-            tag_push.name = tag_nodes_to_central
-        tag_push.exportable = False
-        tag_push.org_id = self.host_org.id
-        tag_push = self.site_admin_connector.add_tag(tag_push)
-        if not isinstance(tag_push, MISPTag):
-            for t in self.site_admin_connector.tags():
-                if t.name == tag_nodes_to_central:
-                    tag_push = t
-                    break
+        pull_tags = []
+        push_tags = []
+        for tagname in pull_to_create + push_to_create:
+            t = MISPTag()
+            t.name = tagname
+            t.exportable = True
+            tag = self.site_admin_connector.add_tag(t)
+            if not isinstance(tag, MISPTag):
+                # Tag already exist
+                for t in self.site_admin_connector.tags():
+                    if t.name == tagname:
+                        tag = t
+                        break
+                else:
+                    raise Exception(f'Unable to find or create tag {tagname}')
+            if tag.name in pull_to_create:
+                pull_tags.append(tag)
             else:
-                raise Exception(f'Unable to find tag {tag_nodes_to_central}')
+                push_tags.append(tag)
 
         # Set limit on sync config
         # # Push
-        filter_tag_push = {"tags": {'OR': [tag_push.id], 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
+        filter_tag_push = {"tags": {'OR': [t.id for t in push_tags], 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
         server.push_rules = json.dumps(filter_tag_push)
         # # Pull
-        filter_tag_pull = {"tags": {'OR': [tag_pull.id], 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
+        filter_tag_pull = {"tags": {'OR': [t.id for t in pull_tags], 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
         server.pull_rules = json.dumps(filter_tag_pull)
         server = self.site_admin_connector.update_server(server)
 
@@ -222,7 +215,7 @@ class MISPInstances():
     def test_sync(self, instance_id: int=0):
         event = MISPEvent()
         event.info = 'test sync'
-        event.add_tag(tag_nodes_to_central)
+        event.add_tag(tag_nodes_to_central[0])
         event.add_attribute('ip-src', '8.8.8.8')
         event.distribution = 4
         event.SharingGroup = self.instances[instance_id].sharing_group
