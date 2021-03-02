@@ -21,6 +21,7 @@ class MISPInstance():
 
         self.initial_user_connector = PyMISP(self.instance_config['baseurl'], self.instance_config['admin_key'], ssl=self.secure_connection, debug=False)
         self.initial_user_connector.update_misp()
+        self.initial_user_connector.update_object_templates()
         # Set the default role (id 3 is normal user)
         self.initial_user_connector.set_default_role(3)
         self.initial_user_connector.toggle_global_pythonify()
