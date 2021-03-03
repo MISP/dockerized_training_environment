@@ -181,7 +181,7 @@ class MISPDocker():
         cur_dir = os.getcwd()
         os.chdir(self.misp_docker_dir)
         # Change perms
-        command = shlex.split('sudo docker-compose exec -T misp /bin/bash chown -R www-data:www-data /var/www/MISP')
+        command = shlex.split('sudo docker-compose exec -T misp /usr/bin/chown -R www-data:www-data /var/www/MISP')
         _print_output(command)
         # Init admin user
         command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake userInit')
