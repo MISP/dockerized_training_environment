@@ -75,7 +75,7 @@ class MISPInstance():
     def _enable_taxonomies(self):
         for taxonomy in self.initial_user_connector.taxonomies():
             if taxonomy.namespace in enabled_taxonomies:
-                self.initial_user_connector.enabled_taxonomies(taxonomy)
+                self.initial_user_connector.enable_taxonomies(taxonomy)
 
     def __repr__(self):
         return f'<{self.__class__.__name__}(external={self.baseurl})>'
