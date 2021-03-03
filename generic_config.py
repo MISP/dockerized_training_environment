@@ -21,3 +21,6 @@ orgadmin_email_name = 'orgadmin'
 
 tag_central_to_nodes = ['push_to_nodes', 'push_to_nodes_alt']
 tag_nodes_to_central = ['push_to_central', 'push_to_central_alt']
+
+# #### Other config
+enabled_taxonomies = ['tlp']

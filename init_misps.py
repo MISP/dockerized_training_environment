@@ -91,6 +91,15 @@ class MISPDocker():
             if to_append not in docker_content['services']['misp']['volumes']:
                 docker_content['services']['misp']['volumes'].append(to_append)
 
+        # Add user defined taxonomies
+        user_defined_taxonomies_path = (self.misp_docker_dir / '..' / '..' / 'taxonomies').resolve()
+        for tax_dir in user_defined_taxonomies_path.glob('*'):
+            if not tax_dir.is_dir():
+                continue
+            to_append = f'{tax_dir}:/var/www/MISP/app/files/taxonomies/{tax_dir.name}/:ro'
+            if to_append not in docker_content['services']['misp']['volumes']:
+                docker_content['services']['misp']['volumes'].append(to_append)
+
         # Add network configuration so all the containers are on the same
         if not docker_content['services']['misp'].get('networks'):
             # Setup the environment variables

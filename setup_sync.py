@@ -7,7 +7,7 @@ import random
 import string
 import csv
 
-from generic_config import central_node_name, prefix_client_node, secure_connection, tag_central_to_nodes, tag_nodes_to_central
+from generic_config import central_node_name, prefix_client_node, secure_connection, tag_central_to_nodes, tag_nodes_to_central, enabled_taxonomies
 
 
 class MISPInstance():
@@ -22,6 +22,7 @@ class MISPInstance():
         self.initial_user_connector = PyMISP(self.instance_config['baseurl'], self.instance_config['admin_key'], ssl=self.secure_connection, debug=False)
         self.initial_user_connector.update_misp()
         self.initial_user_connector.update_object_templates()
+        self.initial_user_connector.update_taxonomies()
         # Set the default role (id 3 is normal user)
         self.initial_user_connector.set_default_role(3)
         self.initial_user_connector.toggle_global_pythonify()
@@ -68,6 +69,13 @@ class MISPInstance():
         self.site_admin_connector.set_server_setting('MISP.baseurl', self.baseurl, force=True)
         # Setup host org
         self.site_admin_connector.set_server_setting('MISP.host_org_id', self.host_org.id)
+        # Enable taxonomies
+        self._enable_taxonomies()
+
+    def _enable_taxonomies(self):
+        for taxonomy in self.initial_user_connector.taxonomies():
+            if taxonomy.namespace in enabled_taxonomies:
+                self.initial_user_connector.enabled_taxonomies(taxonomy)
 
     def __repr__(self):
         return f'<{self.__class__.__name__}(external={self.baseurl})>'
