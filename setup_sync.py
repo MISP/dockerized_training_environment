@@ -149,7 +149,7 @@ class MISPInstance():
         filter_tag_push = {"tags": {'OR': list(set([t.id for t in push_tags])), 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
         server.push_rules = json.dumps(filter_tag_push)
         # # Pull
-        filter_tag_pull = {"tags": {'OR': list(set([t.id for t in pull_tags])), 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
+        filter_tag_pull = {"tags": {'OR': list(set([t.name for t in pull_tags])), 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
         server.pull_rules = json.dumps(filter_tag_pull)
         server = self.site_admin_connector.update_server(server)
 
