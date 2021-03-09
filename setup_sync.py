@@ -27,6 +27,8 @@ class MISPInstance():
         self.initial_user_connector.set_default_role(3)
         # Set the default sharing level to "All communities"
         self.initial_user_connector.set_server_setting('MISP.default_event_distribution', 3, force=True)
+        # Enable taxonomies
+        self._enable_taxonomies()
         self.initial_user_connector.toggle_global_pythonify()
 
         self.baseurl = self.instance_config['baseurl']
@@ -71,11 +73,9 @@ class MISPInstance():
         self.site_admin_connector.set_server_setting('MISP.baseurl', self.baseurl, force=True)
         # Setup host org
         self.site_admin_connector.set_server_setting('MISP.host_org_id', self.host_org.id)
-        # Enable taxonomies
-        self._enable_taxonomies()
 
     def _enable_taxonomies(self):
-        for taxonomy in self.initial_user_connector.taxonomies():
+        for taxonomy in self.initial_user_connector.taxonomies(pythonify=True):
             if taxonomy.namespace in enabled_taxonomies:
                 self.initial_user_connector.enable_taxonomy(taxonomy)
                 self.initial_user_connector.enable_taxonomy_tags(taxonomy)
