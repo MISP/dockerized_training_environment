@@ -24,3 +24,4 @@ tag_nodes_to_central = ['push_to_central', 'push_to_central_alt']
 
 # #### Other config
 enabled_taxonomies = ['tlp']
+unpublish_on_sync = False

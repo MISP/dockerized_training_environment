@@ -7,7 +7,7 @@ import random
 import string
 import csv
 
-from generic_config import central_node_name, prefix_client_node, secure_connection, tag_central_to_nodes, tag_nodes_to_central, enabled_taxonomies
+from generic_config import central_node_name, prefix_client_node, secure_connection, tag_central_to_nodes, tag_nodes_to_central, enabled_taxonomies, unpublish_on_sync
 
 
 class MISPInstance():
@@ -123,6 +123,7 @@ class MISPInstance():
             server = self.site_admin_connector.import_server(server_sync_config)
         server.pull = False
         server.push = True  # Not automatic, but allows to do a push
+        server.unpublish_event = unpublish_on_sync
         server = self.site_admin_connector.update_server(server)
         r = self.site_admin_connector.test_server(server)
         if r['status'] != 1:
