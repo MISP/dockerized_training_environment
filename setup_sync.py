@@ -26,7 +26,7 @@ class MISPInstance():
         # Set the default role (id 3 is normal user)
         self.initial_user_connector.set_default_role(3)
         # Set the default sharing level to "All communities"
-        self.site_admin_connector.set_server_setting('MISP.default_event_distribution', 3, force=True)
+        self.initial_user_connector.set_server_setting('MISP.default_event_distribution', 3, force=True)
         self.initial_user_connector.toggle_global_pythonify()
 
         self.baseurl = self.instance_config['baseurl']
