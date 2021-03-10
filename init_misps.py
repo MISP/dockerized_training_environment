@@ -100,6 +100,15 @@ class MISPDocker():
             if to_append not in docker_content['services']['misp']['volumes']:
                 docker_content['services']['misp']['volumes'].append(to_append)
 
+        # Add user defined dashboards
+        user_defined_dashboards_path = (self.misp_docker_dir / '..' / '..' / 'dashboards').resolve()
+        for dashboard in user_defined_dashboards_path.glob('*.php'):
+            if not dashboard.is_file():
+                continue
+            to_append = f'{dashboard}:/var/www/MISP/app/Lib/Dashboards/Custom/{dashboard.name}/:ro'
+            if to_append not in docker_content['services']['misp']['volumes']:
+                docker_content['services']['misp']['volumes'].append(to_append)
+
         # Add network configuration so all the containers are on the same
         if not docker_content['services']['misp'].get('networks'):
             # Setup the environment variables
