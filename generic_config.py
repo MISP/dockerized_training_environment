@@ -25,3 +25,12 @@ tag_nodes_to_central = ['push_to_central', 'push_to_central_alt']
 # #### Other config
 enabled_taxonomies = ['tlp']
 unpublish_on_sync = False
+
+# #### Special tags
+# The tags below will only be created on the central or client nodes and marked as non-exportable
+# Local tags for central node only
+local_tags_central = ['push_to_nodes']
+# Global tags, reserved for central node
+reserved_tags_central = ['push_to_nodes_alt']
+# Tags reserved for the clients
+local_tags_clients = ['push_to_central_alt']

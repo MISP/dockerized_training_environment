@@ -2,12 +2,60 @@
 # -*- coding: utf-8 -*-
 import json
 from pathlib import Path
-from pymisp import PyMISP, MISPOrganisation, MISPUser, MISPSharingGroup, MISPTag, MISPEvent
+from pymisp import PyMISP, MISPOrganisation, MISPUser, MISPSharingGroup, MISPTag
 import random
 import string
 import csv
 
-from generic_config import central_node_name, prefix_client_node, secure_connection, tag_central_to_nodes, tag_nodes_to_central, enabled_taxonomies, unpublish_on_sync
+from generic_config import (central_node_name, prefix_client_node, secure_connection,
+                            tag_central_to_nodes, tag_nodes_to_central, enabled_taxonomies,
+                            unpublish_on_sync, local_tags_central, reserved_tags_central,
+                            local_tags_clients)
+
+
+def create_or_update_organisation(connector: PyMISP, organisation: MISPOrganisation) -> MISPOrganisation:
+    to_return_org = connector.add_organisation(organisation)
+    if isinstance(to_return_org, MISPOrganisation):
+        return to_return_org
+    # The organisation is probably already there
+    for o in connector.organisations(scope='all'):
+        if o.name == organisation.name:
+            to_return_org = connector.update_organisation(organisation, o.id)
+            if isinstance(to_return_org, MISPOrganisation):
+                return to_return_org
+            raise Exception(f'Unable to update {organisation.name}: {to_return_org}')
+    else:
+        raise Exception(f'Unable to create {organisation.name}: {to_return_org}')
+
+
+def create_or_update_user(connector: PyMISP, user: MISPUser) -> MISPUser:
+    to_return_user = connector.add_user(user)
+    if isinstance(to_return_user, MISPUser):
+        return to_return_user
+    # The user already exists
+    for u in connector.users():
+        if u.email == user.email:
+            to_return_user = connector.update_user(user, u.id)
+            if isinstance(to_return_user, MISPUser):
+                return to_return_user
+            raise Exception(f'Unable to update {user.email}: {to_return_user}')
+    else:
+        raise Exception(f'Unable to create {user.email}: {to_return_user}')
+
+
+def create_or_update_tag(connector: PyMISP, tag: MISPTag) -> MISPTag:
+    to_return_tag = connector.add_tag(tag)
+    if isinstance(to_return_tag, MISPTag):
+        return to_return_tag
+    # The tag probably already exists
+    for t in connector.tags():
+        if t.name == tag.name:
+            to_return_tag = connector.update_tag(tag, t.id)
+            if isinstance(to_return_tag, MISPTag):
+                return to_return_tag
+            raise Exception(f'Unable to update {tag.name}: {to_return_tag}')
+    else:
+        raise Exception(f'Unable to create {tag.name}: {to_return_tag}')
 
 
 class MISPInstance():
@@ -29,6 +77,7 @@ class MISPInstance():
         self.initial_user_connector.set_server_setting('MISP.default_event_distribution', 3, force=True)
         # Enable taxonomies
         self._enable_taxonomies()
+        # Enable global pythonify
         self.initial_user_connector.toggle_global_pythonify()
 
         self.baseurl = self.instance_config['baseurl']
@@ -38,31 +87,14 @@ class MISPInstance():
         # Create organisation
         organisation = MISPOrganisation()
         organisation.name = self.instance_config['admin_orgname']
-        self.host_org = self.initial_user_connector.add_organisation(organisation)
-        if not isinstance(self.host_org, MISPOrganisation):
-            # The organisation is probably already there
-            organisations = self.initial_user_connector.organisations()
-            for organisation in organisations:
-                if organisation.name == self.instance_config['admin_orgname']:
-                    self.host_org = organisation
-                    break
-            else:
-                raise Exception('Unable to find admin organisation')
+        self.host_org = create_or_update_organisation(self.initial_user_connector, organisation)
 
         # Create Site admin in new org
         user = MISPUser()
         user.email = self.instance_config['email_site_admin']
         user.org_id = self.host_org.id
         user.role_id = 1  # Site admin
-        self.host_site_admin = self.initial_user_connector.add_user(user)
-        if not isinstance(self.host_site_admin, MISPUser):
-            users = self.initial_user_connector.users()
-            for user in users:
-                if user.email == self.instance_config['email_site_admin']:
-                    self.host_site_admin = user
-                    break
-            else:
-                raise Exception('Unable to find admin user')
+        self.host_site_admin = create_or_update_user(self.initial_user_connector, user)
 
         self.site_admin_connector = PyMISP(self.baseurl, self.host_site_admin.authkey, ssl=self.secure_connection, debug=False)
         self.site_admin_connector.toggle_global_pythonify()
@@ -73,6 +105,8 @@ class MISPInstance():
         self.site_admin_connector.set_server_setting('MISP.baseurl', self.baseurl, force=True)
         # Setup host org
         self.site_admin_connector.set_server_setting('MISP.host_org_id', self.host_org.id)
+        # Setup REST client setup
+        self.site_admin_connector.set_server_setting('Security.rest_client_baseurl', 'http://127.0.0.1')
 
     def _enable_taxonomies(self):
         for taxonomy in self.initial_user_connector.taxonomies(pythonify=True):
@@ -84,31 +118,13 @@ class MISPInstance():
         return f'<{self.__class__.__name__}(external={self.baseurl})>'
 
     def create_sync_user(self, organisation, hostname):
-        sync_org = self.site_admin_connector.add_organisation(organisation)
-        if not isinstance(sync_org, MISPOrganisation):
-            # The organisation is probably already there
-            organisations = self.initial_user_connector.organisations(scope='all')
-            for org in organisations:
-                if org.name == organisation.name:
-                    sync_org = org
-                    break
-            else:
-                raise Exception(f'Unable to find sync organisation: {organisation.name}')
-
+        sync_org = create_or_update_organisation(self.site_admin_connector, organisation)
         email = f"sync_user@{hostname}"
         user = MISPUser()
         user.email = email
         user.org_id = sync_org.id
         user.role_id = 5  # Sync user
-        sync_user = self.site_admin_connector.add_user(user)
-        if not isinstance(sync_user, MISPUser):
-            users = self.initial_user_connector.users()
-            for user in users:
-                if user.email == email:
-                    sync_user = user
-                    break
-            else:
-                raise Exception('Unable to find sync user')
+        sync_user = create_or_update_user(self.site_admin_connector, user)
 
         sync_user_connector = PyMISP(self.site_admin_connector.root_url, sync_user.authkey, ssl=self.secure_connection, debug=False)
         return sync_user_connector.get_sync_config(pythonify=True)
@@ -138,19 +154,8 @@ class MISPInstance():
 
         pull_tags = []
         push_tags = []
-        for tagname in pull_to_create + push_to_create:
-            t = MISPTag()
-            t.name = tagname
-            t.exportable = True
-            tag = self.site_admin_connector.add_tag(t)
-            if not isinstance(tag, MISPTag):
-                # Tag already exist
-                for t in self.site_admin_connector.tags():
-                    if t.name == tagname:
-                        tag = t
-                        break
-                else:
-                    raise Exception(f'Unable to find or create tag {tagname}')
+        # The tags exist.
+        for tag in self.site_admin_connector.tags():
             if tag.name in pull_to_create:
                 pull_tags.append(tag)
             if tag.name in push_to_create:
@@ -177,6 +182,7 @@ class MISPInstance():
             self.sharing_group = self.site_admin_connector.add_sharing_group(sharing_group)
             self.site_admin_connector.add_server_to_sharing_group(self.sharing_group, server)
             self.site_admin_connector.add_org_to_sharing_group(self.sharing_group, server_sync_config.Organisation)
+            self.site_admin_connector.add_org_to_sharing_group(self.sharing_group, self.host_org)
 
     def create_org_admin(self):
         # Create org admin (will be used during the exercise)
@@ -184,15 +190,7 @@ class MISPInstance():
         user.email = self.instance_config['email_orgadmin']
         user.org_id = self.host_org.id
         user.role_id = 2  # Org admin
-        self.org_admin = self.initial_user_connector.add_user(user)
-        if not isinstance(self.org_admin, MISPUser):
-            users = self.initial_user_connector.users()
-            for user in users:
-                if user.email == self.instance_config['email_orgadmin']:
-                    self.org_admin = user
-                    break
-            else:
-                raise Exception('Unable to find org admin')
+        self.org_admin = create_or_update_user(self.initial_user_connector, user)
 
 
 class MISPInstances():
@@ -207,9 +205,32 @@ class MISPInstances():
 
         self.central_node = MISPInstance(self.misp_instances_dir / self.central_node_name, self.secure_connection)
         self.central_node.create_org_admin()
+        # Locals tags for central node, not sync'ed
+        for tagname in local_tags_central:
+            tag = MISPTag()
+            tag.name = tagname
+            tag.exportable = False
+            tag.org_id = self.central_node.host_org.id
+            create_or_update_tag(self.central_node.initial_user_connector, tag)
+
+        # Reserved tags for central node, sync'ed but only selectable by central node org
+        for tagname in reserved_tags_central:
+            tag = MISPTag()
+            tag.name = tagname
+            tag.exportable = True
+            tag.org_id = self.central_node.host_org.id
+            create_or_update_tag(self.central_node.initial_user_connector, tag)
+
+        # Tags for sync - Central node to clients
+        for tagname in tag_central_to_nodes:
+            if tagname in local_tags_central + reserved_tags_central:
+                continue
+            tag = MISPTag()
+            tag.name = tagname
+            tag.exportable = True
+            create_or_update_tag(self.central_node.initial_user_connector, tag)
 
         self.instances = []
-
         # Initialize all instances to sync with central node
         for path in self.misp_instances_dir.glob(f'{self.prefix_client_node}*'):
             if path.name == self.central_node_name:
@@ -219,22 +240,28 @@ class MISPInstances():
             sync_server_config.name = f'Sync with {sync_server_config.Organisation["name"]}'
             instance.configure_sync(sync_server_config)
             instance.create_org_admin()
+            # Local tags for client nodes, not sync'ed
+            for tagname in local_tags_clients:
+                tag = MISPTag()
+                tag.name = tagname
+                tag.exportable = False
+                tag.org_id = instance.host_org.id
+                create_or_update_tag(instance.initial_user_connector, tag)
+
+            # Tags for sync - clients to central node
+            for tagname in tag_nodes_to_central:
+                if tagname in local_tags_clients:
+                    continue
+                tag = MISPTag()
+                tag.name = tagname
+                tag.exportable = True
+                create_or_update_tag(instance.initial_user_connector, tag)
+
             self.instances.append(instance)
             # Initialize sync central node to child
             central_node_sync_config = instance.create_sync_user(self.central_node.host_org, self.central_node.hostname)
             central_node_sync_config.name = f'Sync with {central_node_sync_config.Organisation["name"]}'
             self.central_node.configure_sync(central_node_sync_config, from_central_node=True)
-
-    def test_sync(self, instance_id: int=0):
-        event = MISPEvent()
-        event.info = 'test sync'
-        event.add_tag(tag_nodes_to_central[0])
-        event.add_attribute('ip-src', '8.8.8.8')
-        event.distribution = 4
-        event.SharingGroup = self.instances[instance_id].sharing_group
-
-        self.instances[instance_id].site_admin_connector.add_event(event)
-        self.instances[instance_id].site_admin_connector.publish(event)
 
     def dump_all_auth(self):
         auth = []
