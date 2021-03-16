@@ -230,6 +230,12 @@ class MISPInstances():
             tag.exportable = True
             create_or_update_tag(self.central_node.initial_user_connector, tag)
 
+        # Tags pushed by the clients, used as filter on pull from central node
+        for tagname in tag_nodes_to_central:
+            tag = MISPTag()
+            tag.name = tagname
+            create_or_update_tag(self.central_node.initial_user_connector, tag)
+
         self.instances = []
         # Initialize all instances to sync with central node
         for path in self.misp_instances_dir.glob(f'{self.prefix_client_node}*'):
@@ -238,7 +244,6 @@ class MISPInstances():
             instance = MISPInstance(path, self.secure_connection)
             sync_server_config = self.central_node.create_sync_user(instance.host_org, instance.hostname)
             sync_server_config.name = f'Sync with {sync_server_config.Organisation["name"]}'
-            instance.configure_sync(sync_server_config)
             instance.create_org_admin()
             # Local tags for client nodes, not sync'ed
             for tagname in local_tags_clients:
@@ -256,6 +261,7 @@ class MISPInstances():
                 tag.name = tagname
                 tag.exportable = True
                 create_or_update_tag(instance.initial_user_connector, tag)
+            instance.configure_sync(sync_server_config)
 
             self.instances.append(instance)
             # Initialize sync central node to child
