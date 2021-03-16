@@ -266,7 +266,7 @@ class MISPInstances():
             for tagname in reserved_tags_central + tag_central_to_nodes:
                 tag = MISPTag()
                 tag.name = tagname
-                tag.org_id = self.sync_org.id
+                tag.org_id = instance.sync_org.id
                 create_or_update_tag(self.central_node.initial_user_connector, tag)
 
             instance.configure_sync(sync_server_config)
