@@ -242,8 +242,6 @@ class MISPInstances():
             if path.name == self.central_node_name:
                 continue
             instance = MISPInstance(path, self.secure_connection)
-            sync_server_config = self.central_node.create_sync_user(instance.host_org, instance.hostname)
-            sync_server_config.name = f'Sync with {sync_server_config.Organisation["name"]}'
             instance.create_org_admin()
             # Local tags for client nodes, not sync'ed
             for tagname in local_tags_clients:
@@ -262,6 +260,11 @@ class MISPInstances():
                 tag.exportable = True
                 create_or_update_tag(instance.initial_user_connector, tag)
 
+            # Initialize sync central node to child
+            central_node_sync_config = instance.create_sync_user(self.central_node.host_org, self.central_node.hostname)
+            central_node_sync_config.name = f'Sync with {central_node_sync_config.Organisation["name"]}'
+            self.central_node.configure_sync(central_node_sync_config, from_central_node=True)
+
             # Tags pushed by the central node, forbidden to clients.
             for tagname in reserved_tags_central + tag_central_to_nodes:
                 tag = MISPTag()
@@ -269,13 +272,10 @@ class MISPInstances():
                 tag.org_id = instance.sync_org.id
                 create_or_update_tag(self.central_node.initial_user_connector, tag)
 
+            sync_server_config = self.central_node.create_sync_user(instance.host_org, instance.hostname)
+            sync_server_config.name = f'Sync with {sync_server_config.Organisation["name"]}'
             instance.configure_sync(sync_server_config)
-
             self.instances.append(instance)
-            # Initialize sync central node to child
-            central_node_sync_config = instance.create_sync_user(self.central_node.host_org, self.central_node.hostname)
-            central_node_sync_config.name = f'Sync with {central_node_sync_config.Organisation["name"]}'
-            self.central_node.configure_sync(central_node_sync_config, from_central_node=True)
 
     def dump_all_auth(self):
         auth = []
