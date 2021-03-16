@@ -22,7 +22,7 @@ def create_or_update_organisation(connector: PyMISP, organisation: MISPOrganisat
         if o.name == organisation.name:
             to_return_org = connector.update_organisation(organisation, o.id)
             if isinstance(to_return_org, MISPOrganisation):
-                return to_return_org
+                return connector.get_organisation(o.id)
             raise Exception(f'Unable to update {organisation.name}: {to_return_org}')
     else:
         raise Exception(f'Unable to create {organisation.name}: {to_return_org}')
@@ -118,11 +118,11 @@ class MISPInstance():
         return f'<{self.__class__.__name__}(external={self.baseurl})>'
 
     def create_sync_user(self, organisation, hostname):
-        sync_org = create_or_update_organisation(self.site_admin_connector, organisation)
+        self.sync_org = create_or_update_organisation(self.site_admin_connector, organisation)
         email = f"sync_user@{hostname}"
         user = MISPUser()
         user.email = email
-        user.org_id = sync_org.id
+        user.org_id = self.sync_org.id
         user.role_id = 5  # Sync user
         sync_user = create_or_update_user(self.site_admin_connector, user)
 
@@ -230,7 +230,7 @@ class MISPInstances():
             tag.exportable = True
             create_or_update_tag(self.central_node.initial_user_connector, tag)
 
-        # Tags pushed by the clients, used as filter on pull from central node
+        # Tags pushed by the clients, used as filter on pull from clients on central node
         for tagname in tag_nodes_to_central:
             tag = MISPTag()
             tag.name = tagname
@@ -261,6 +261,14 @@ class MISPInstances():
                 tag.name = tagname
                 tag.exportable = True
                 create_or_update_tag(instance.initial_user_connector, tag)
+
+            # Tags pushed by the central node, forbidden to clients.
+            for tagname in reserved_tags_central + tag_central_to_nodes:
+                tag = MISPTag()
+                tag.name = tagname
+                tag.org_id = self.sync_org.id
+                create_or_update_tag(self.central_node.initial_user_connector, tag)
+
             instance.configure_sync(sync_server_config)
 
             self.instances.append(instance)
