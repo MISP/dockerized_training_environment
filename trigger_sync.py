@@ -21,8 +21,12 @@ class SyncAll():
         with (central_node_config_path / 'config.json').open() as f:
             config_central_node = json.load(f)
 
-        self.central_node = PyMISP(config_central_node['baseurl'], config_central_node['admin_key'],
-                                   ssl=self.secure_connection, debug=False)
+        try:
+            self.central_node = PyMISP(config_central_node['baseurl'], config_central_node['admin_key'],
+                                       ssl=self.secure_connection, debug=False)
+        except Exception as e:
+            print('Unable to connect to central node:', e)
+            raise Exception(f'Unable to connect to central node: {e}')
 
         self.clients = []
         for path in self.misp_instances_dir.glob(f'{self.prefix_client_node}*'):
@@ -30,9 +34,12 @@ class SyncAll():
                 continue
             with (path / 'config.json').open() as f:
                 config = json.load(f)
-            client = PyMISP(config['baseurl'], config['admin_key'], ssl=self.secure_connection,
-                            debug=False)
-            self.clients.append(client)
+            try:
+                client = PyMISP(config['baseurl'], config['admin_key'], ssl=self.secure_connection,
+                                debug=False)
+                self.clients.append(client)
+            except Exception as e:
+                print(f'unable to connect to node {path.name}: {e}')
 
     def _sync_all(self, node: PyMISP):
         for server in node.servers(pythonify=True):
