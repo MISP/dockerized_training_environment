@@ -30,7 +30,7 @@ class SyncAll():
                 continue
             with (path / 'config.json').open() as f:
                 config = json.load(f)
-            client = PyMISP(path['baseurl'], config['admin_key'], ssl=self.secure_connection,
+            client = PyMISP(config['baseurl'], config['admin_key'], ssl=self.secure_connection,
                             debug=False)
             self.clients.append(client)
 
