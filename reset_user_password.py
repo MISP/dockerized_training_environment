@@ -6,7 +6,7 @@ import json
 import argparse
 
 
-def create_user(connector, config, email):
+def create_user(connector, config, email, org_id=None):
     organisations = connector.organisations(pythonify=True)
     for organisation in organisations:
         if organisation.name == config['admin_orgname']:
@@ -16,7 +16,9 @@ def create_user(connector, config, email):
         raise Exception('No default org found.')
     user = MISPUser()
     user.email = email
-    user.org_id = host_org.id
+    if not org_id:
+        org_id = host_org.id
+    user.org_id = org_id
     user.role_id = 1
     user.password = 'Password1234'
     new_user = connector.add_user(user)
@@ -28,6 +30,7 @@ def main():
     parser.add_argument('-i', '--instance', required=True)
     parser.add_argument('-u', '--user', required=True)
     parser.add_argument('--create_if_missing', default=False, action='store_true')
+    parser.add_argument('-o', '--org_id', default=None, help="Org ID. Only for new users.")
     args = parser.parse_args()
 
     with (Path('misps') / args.instance / 'config.json').open() as f:
@@ -41,7 +44,7 @@ def main():
             break
     else:
         if args.create_if_missing:
-            create_user(initial_user_connector, config, args.user)
+            create_user(initial_user_connector, config, args.user, args.org_id)
         else:
             print(f'unable to find user {args.user} in {args.instance}')
 
