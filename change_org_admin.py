@@ -10,13 +10,14 @@ from generic_config import (central_node_name, prefix_client_node, secure_connec
 
 
 def create_or_update_user(connector: PyMISP, user: MISPUser) -> MISPUser:
-    to_return_user = connector.add_user(user)
+    to_return_user = connector.add_user(user, pythonify=True)
     if isinstance(to_return_user, MISPUser):
         return to_return_user
     # The user already exists
-    for u in connector.users():
+    for u in connector.users(pythonify=True):
         if u.email == user.email:
-            to_return_user = connector.update_user(user, u.id)
+            print(u.id, user.to_json(), connector.root_url)
+            to_return_user = connector.update_user(user, u.id, pythonify=True)
             if isinstance(to_return_user, MISPUser):
                 return to_return_user
             raise Exception(f'Unable to update {user.email}: {to_return_user}')
