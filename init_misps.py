@@ -105,7 +105,7 @@ class MISPDocker():
         for dashboard in user_defined_dashboards_path.glob('*.php'):
             if not dashboard.is_file():
                 continue
-            to_append = f'{dashboard}:/var/www/MISP/app/Lib/Dashboards/Custom/{dashboard.name}/:ro'
+            to_append = f'{dashboard}:/var/www/MISP/app/Lib/Dashboard/Custom/{dashboard.name}/:ro'
             if to_append not in docker_content['services']['misp']['volumes']:
                 docker_content['services']['misp']['volumes'].append(to_append)
 
