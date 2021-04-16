@@ -8,7 +8,7 @@ from generic_config import (central_node_name)
 
 def main():
     parser = argparse.ArgumentParser(description='Reset a user password / create a user.')
-    parser.add_argument('-u', '--user', required=True, help='Email address of the user, login name')
+    parser.add_argument('-e', '--email', required=True, help='Email address of the user, login name')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--instance', required=False, help='Name of the admin org on the instance. Quote if there is a space (ex. "MISP 01")')
     group.add_argument('--everywhere', default=False, action='store_true', help='Create/update and all the instances')
