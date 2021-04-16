@@ -1,52 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from pathlib import Path
-from pymisp import PyMISP, MISPUser
-import json
 import argparse
 
-
-def create_user(connector, config, email, org_id=None):
-    organisations = connector.organisations(pythonify=True)
-    for organisation in organisations:
-        if organisation.name == config['admin_orgname']:
-            host_org = organisation
-            break
-    else:
-        raise Exception('No default org found.')
-    user = MISPUser()
-    user.email = email
-    if not org_id:
-        org_id = host_org.id
-    user.org_id = org_id
-    user.role_id = 1
-    user.password = 'Password1234'
-    new_user = connector.add_user(user)
-    print(new_user)
+from misp_instances import MISPInstances
+from generic_config import (central_node_name)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Reset a user password / create a user')
-    parser.add_argument('-i', '--instance', required=True)
-    parser.add_argument('-u', '--user', required=True)
-    parser.add_argument('--create_if_missing', default=False, action='store_true')
-    parser.add_argument('-o', '--org_id', default=None, help="Org ID. Only for new users.")
+    parser = argparse.ArgumentParser(description='Reset a user password / create a user.')
+    parser.add_argument('-u', '--user', required=True, help='Email address of the user, login name')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--instance', required=False, help='Name of the admin org on the instance. Quote if there is a space (ex. "MISP 01")')
+    group.add_argument('--everywhere', default=False, action='store_true', help='Create/update and all the instances')
     args = parser.parse_args()
 
-    with (Path('misps') / args.instance / 'config.json').open() as f:
-        config = json.load(f)
+    instances = MISPInstances()
 
-    initial_user_connector = PyMISP(config['baseurl'], config['admin_key'], ssl=False, debug=False)
-    for user in initial_user_connector.users(pythonify=True):
-        if user.email == args.user:
-            u = initial_user_connector.update_user({'password': 'Password1234'}, user.id)
-            print(u)
-            break
-    else:
-        if args.create_if_missing:
-            create_user(initial_user_connector, config, args.user, args.org_id)
+    if args.instance:
+        if args.instance == central_node_name:
+            instances.central_node.init_default_user(args.email)
+        elif args.instance in instances.client_nodes:
+            instances.client_nodes[args.instance].init_default_user(args.email)
         else:
-            print(f'unable to find user {args.user} in {args.instance}')
+            available = list(instances.client_nodes.keys())
+            raise Exception(f'Available instances: {available}')
+    else:
+        instances.central_node.init_default_user(args.email)
+        for node in instances.client_nodes.values():
+            node.init_default_user(args.email)
 
 
 if __name__ == '__main__':
