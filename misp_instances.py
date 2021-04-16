@@ -33,8 +33,12 @@ class MISPInstance():
                 self.owner_site_admin = PyMISP(self.config['baseurl'], user.authkey,
                                                ssl=secure_connection, debug=False)
             if user.email == self.config['email_orgadmin']:
-                self.owner_orgadmin = PyMISP(self.config['baseurl'], user.authkey,
-                                             ssl=secure_connection, debug=False)
+                try:
+                    # This user might have been disabled by the users
+                    self.owner_orgadmin = PyMISP(self.config['baseurl'], user.authkey,
+                                                 ssl=secure_connection, debug=False)
+                except Exception:
+                    self.owner_orgadmin = None
 
         # Get container name
         cur_dir = os.getcwd()
@@ -112,7 +116,7 @@ class MISPInstance():
         '''Default user is a local admin in the host org'''
         user = MISPUser()
         user.email = email
-        if not org_id:
+        if org_id:
             user.org_id = org_id
         else:
             for org in self.owner_site_admin.organisations(pythonify=True):
