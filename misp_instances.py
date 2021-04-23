@@ -129,6 +129,9 @@ class MISPInstance():
         user.password = password
         self.create_or_update_user(user)
 
+    def user_statistics(self, context: str=''):
+        return self.owner_site_admin.users_statistics(context)
+
 
 class MISPInstances():
 
@@ -195,3 +198,18 @@ class MISPInstances():
 
         for instance in self.client_nodes.values():
             instance.delete_events(to_delete_on_bts)
+
+    def dump_all_stats(self, dump_to: str):
+        dest_dir = Path(dump_to)
+        dest_dir.mkdir(exists_ok=True)
+        central_node_stats = self.central_node.user_statistics()
+
+        with (dest_dir / f'{self.central_node.owner_orgname}.json', 'w') as f:
+            json.dump(central_node_stats, f)
+
+        client_nodes_stats = {}
+        for name, instance in self.client_nodes.items():
+            client_nodes_stats[name] = instance.user_statistics()
+
+        with (dest_dir / 'clients.json', 'w') as f:
+            json.dump(client_nodes_stats, f)
