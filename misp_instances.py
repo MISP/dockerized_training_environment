@@ -134,6 +134,7 @@ class MISPInstance():
 
     def dump_all_events_as_feed(self, root_path: Path):
         feed_dir = root_path / self.owner_orgname
+        feed_dir.mkdir(parents=True, exist_ok=True)
         manifest = {}
         hashes = []
         for event in self.owner_site_admin.search(metadata=True, pythonify=True):
@@ -141,8 +142,8 @@ class MISPInstance():
             e_feed = e.to_feed(with_meta=True)
             hashes += [[h, e.uuid] for h in e_feed['Event'].pop('_hashes')]
             manifest.update(e_feed['Event'].pop('_manifest'))
-            with (feed_dir / f'{event["Event"]["uuid"]}.json').open('w') as _fw:
-                json.dump(event, _fw, indent=2)
+            with (feed_dir / f'{event.uuid}.json').open('w') as _fw:
+                json.dump(e_feed, _fw, indent=2)
         with (feed_dir / 'hashes.csv').open('w') as hash_file:
             for element in hashes:
                 hash_file.write('{},{}\n'.format(element[0], element[1]))
