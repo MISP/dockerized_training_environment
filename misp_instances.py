@@ -129,8 +129,25 @@ class MISPInstance():
         user.password = password
         self.create_or_update_user(user)
 
-    def user_statistics(self, context: str=''):
+    def user_statistics(self, context: str='data'):
         return self.owner_site_admin.users_statistics(context)
+
+    def dump_all_events_as_feed(self, root_path: Path):
+        feed_dir = root_path / self.owner_orgname
+        manifest = {}
+        hashes = []
+        for event in self.owner_site_admin.search(metadata=True, pythonify=True):
+            e = self.owner_site_admin.get_event(event.uuid, deleted=True, pythonify=True)
+            e_feed = e.to_feed(with_meta=True)
+            hashes += [[h, e.uuid] for h in e_feed['Event'].pop('_hashes')]
+            manifest.update(e_feed['Event'].pop('_manifest'))
+            with (feed_dir / f'{event["Event"]["uuid"]}.json').open('w') as _fw:
+                json.dump(event, _fw, indent=2)
+        with (feed_dir / 'hashes.csv').open('w') as hash_file:
+            for element in hashes:
+                hash_file.write('{},{}\n'.format(element[0], element[1]))
+        with (feed_dir / 'manifest.json').open('w') as manifest_file:
+            json.dump(manifest, manifest_file, indent=2)
 
 
 class MISPInstances():
@@ -201,15 +218,21 @@ class MISPInstances():
 
     def dump_all_stats(self, dump_to: str):
         dest_dir = Path(dump_to)
-        dest_dir.mkdir(exists_ok=True)
+        dest_dir.mkdir(exist_ok=True)
         central_node_stats = self.central_node.user_statistics()
 
-        with (dest_dir / f'{self.central_node.owner_orgname}.json', 'w') as f:
+        with (dest_dir / f'{self.central_node.owner_orgname}.json').open('w') as f:
             json.dump(central_node_stats, f)
 
         client_nodes_stats = {}
         for name, instance in self.client_nodes.items():
             client_nodes_stats[name] = instance.user_statistics()
 
-        with (dest_dir / 'clients.json', 'w') as f:
+        with (dest_dir / 'clients.json').open('w') as f:
             json.dump(client_nodes_stats, f)
+
+    def dump_all_events(self):
+        root_dir = Path('feeds')
+        self.central_node.dump_all_events_as_feed(root_dir)
+        for name, instance in self.client_nodes.items():
+            instance.dump_all_events_as_feed(root_dir)
