@@ -2,13 +2,10 @@
 # -*- coding: utf-8 -*-
 import csv
 import json
-import os
 import random
-import shlex
 import string
 
 from pathlib import Path
-from subprocess import Popen, PIPE
 
 from pymisp import PyMISP, MISPOrganisation, MISPUser, MISPSharingGroup, MISPTag
 
@@ -101,7 +98,7 @@ class MISPInstance():
         user.org_id = self.host_org.id
         user.role_id = 1  # Site admin
         self.host_site_admin = create_or_update_user(self.initial_user_connector, user)
-        self.host_site_admin.authkey = self._get_api_key(self.host_site_admin.email)
+        self.host_site_admin.authkey = self.initial_user_connector.get_new_authkey(self.host_site_admin)
 
         self.site_admin_connector = PyMISP(self.baseurl, self.host_site_admin.authkey, ssl=self.secure_connection, debug=False)
         self.site_admin_connector.toggle_global_pythonify()
@@ -121,18 +118,6 @@ class MISPInstance():
                 self.initial_user_connector.enable_taxonomy(taxonomy)
                 self.initial_user_connector.enable_taxonomy_tags(taxonomy)
 
-    def _get_api_key(self, email: str) -> str:
-        cur_dir = os.getcwd()
-        os.chdir(self.misp_instance_dir)
-        command = shlex.split(f'sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake User change_authkey {email}')
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        out, err = p.communicate()
-        os.chdir(cur_dir)
-        if out:
-            key = out.split(b' ')[-1].decode().strip()
-            return key
-        raise Exception('unable to get key')
-
     def __repr__(self):
         return f'<{self.__class__.__name__}(external={self.baseurl})>'
 
@@ -145,6 +130,7 @@ class MISPInstance():
         user.role_id = 5  # Sync user
         sync_user = create_or_update_user(self.site_admin_connector, user)
         sync_user.authkey = self._get_api_key(sync_user.email)
+        sync_user.authkey = self.site_admin_connector.get_new_authkey(sync_user)
 
         sync_user_connector = PyMISP(self.site_admin_connector.root_url, sync_user.authkey, ssl=self.secure_connection, debug=False)
         return sync_user_connector.get_sync_config(pythonify=True)
