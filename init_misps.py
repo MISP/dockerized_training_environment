@@ -34,7 +34,7 @@ class MISPDocker():
         self.config = {
             'http_port': f'80{self.instance_id}',
             'https_port': f'443{self.instance_id}',
-            'admin_key': ''.join(random.choices(string.ascii_uppercase + string.digits, k=40)),
+            'admin_password': ''.join(random.choices(string.ascii_uppercase + string.digits, k=40)),
         }
 
         if self.instance_id == 0:
@@ -206,11 +206,19 @@ class MISPDocker():
         command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin updatesDone 1')
         _print_output(command)
         # Set the admin password
-        command = shlex.split(f'sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Password admin@admin.test {self.config["admin_key"]}')
+        command = shlex.split(f'sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Password admin@admin.test {self.config["admin_password"]}')
         _print_output(command)
-        # Set the admin key
-        command = shlex.split(f'sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake admin change_authkey admin@admin.test {self.config["admin_key"]}')
-        _print_output(command)
+        # Get the admin key
+        command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake User change_authkey admin@admin.test')
+        print(command)
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
+        if out:
+            key = out.split(b' ')[-1].decode().strip()
+            print(key)
+            self.config['admin_key'] = key
+        else:
+            print('error:', err)
         # Turn the instance live
         command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake live 1')
         _print_output(command)
