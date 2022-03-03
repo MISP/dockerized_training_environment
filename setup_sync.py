@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import json
-from pathlib import Path
-from pymisp import PyMISP, MISPOrganisation, MISPUser, MISPSharingGroup, MISPTag
-import random
-import string
 import csv
+import json
+import os
+import random
+import shlex
+import string
+
+from pathlib import Path
+from subprocess import Popen, PIPE
+
+from pymisp import PyMISP, MISPOrganisation, MISPUser, MISPSharingGroup, MISPTag
 
 from generic_config import (central_node_name, prefix_client_node, secure_connection,
                             tag_central_to_nodes, tag_nodes_to_central, enabled_taxonomies,
@@ -61,7 +66,8 @@ def create_or_update_tag(connector: PyMISP, tag: MISPTag) -> MISPTag:
 class MISPInstance():
 
     def __init__(self, misp_instance_dir, secure_connection):
-        with (misp_instance_dir / 'config.json').open() as f:
+        self.misp_instance_dir = misp_instance_dir
+        with (self.misp_instance_dir / 'config.json').open() as f:
             self.instance_config = json.load(f)
 
         print('Initialize', self.instance_config['admin_orgname'])
@@ -95,6 +101,7 @@ class MISPInstance():
         user.org_id = self.host_org.id
         user.role_id = 1  # Site admin
         self.host_site_admin = create_or_update_user(self.initial_user_connector, user)
+        self.host_site_admin.authkey = self._get_api_key(self.host_site_admin.email)
 
         self.site_admin_connector = PyMISP(self.baseurl, self.host_site_admin.authkey, ssl=self.secure_connection, debug=False)
         self.site_admin_connector.toggle_global_pythonify()
@@ -114,6 +121,18 @@ class MISPInstance():
                 self.initial_user_connector.enable_taxonomy(taxonomy)
                 self.initial_user_connector.enable_taxonomy_tags(taxonomy)
 
+    def _get_api_key(self, email: str) -> str:
+        cur_dir = os.getcwd()
+        os.chdir(self.misp_instance_dir)
+        command = shlex.split(f'sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake User change_authkey {email}')
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
+        os.chdir(cur_dir)
+        if out:
+            key = out.split(b' ')[-1].decode().strip()
+            return key
+        raise Exception('unable to get key')
+
     def __repr__(self):
         return f'<{self.__class__.__name__}(external={self.baseurl})>'
 
@@ -125,18 +144,21 @@ class MISPInstance():
         user.org_id = self.sync_org.id
         user.role_id = 5  # Sync user
         sync_user = create_or_update_user(self.site_admin_connector, user)
+        sync_user.authkey = self._get_api_key(sync_user.email)
 
         sync_user_connector = PyMISP(self.site_admin_connector.root_url, sync_user.authkey, ssl=self.secure_connection, debug=False)
         return sync_user_connector.get_sync_config(pythonify=True)
 
     def configure_sync(self, server_sync_config, from_central_node=False):
         # Add sharing server
+        print(server_sync_config.to_json(indent=2))
         for s in self.site_admin_connector.servers():
             if s.name == server_sync_config.name:
                 server = s
                 break
         else:
             server = self.site_admin_connector.import_server(server_sync_config)
+        print(server)
         server.pull = False
         server.push = True  # Not automatic, but allows to do a push
         server.unpublish_event = unpublish_on_sync
