@@ -129,7 +129,6 @@ class MISPInstance():
         user.org_id = self.sync_org.id
         user.role_id = 5  # Sync user
         sync_user = create_or_update_user(self.site_admin_connector, user)
-        sync_user.authkey = self._get_api_key(sync_user.email)
         sync_user.authkey = self.site_admin_connector.get_new_authkey(sync_user)
 
         sync_user_connector = PyMISP(self.site_admin_connector.root_url, sync_user.authkey, ssl=self.secure_connection, debug=False)
