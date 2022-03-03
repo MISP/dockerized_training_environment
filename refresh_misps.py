@@ -18,7 +18,7 @@ for misp_dir in misps_root.glob(f'{prefix_client_node}*'):
     command = shlex.split('sudo docker-compose exec misp apt install -y jq curl dialog')
     p = Popen(command)
     p.wait()
-    command = shlex.split('sudo docker-compose exec misp bash /var/www/MISP/misp-refresh/refresh.sh')
+    command = shlex.split('sudo docker-compose exec misp bash /var/www/MISP/misp-refresh/refresh.sh -ni')
     p = Popen(command)
     p.wait()
     os.chdir(cur_dir)
