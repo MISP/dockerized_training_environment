@@ -299,6 +299,15 @@ class MISPInstances():
             instance.configure_sync(sync_server_config)
             self.instances.append(instance)
 
+    def setup_sync_all(self):
+        for instance in self.instances:
+            for remote_instance in self.instances:
+                if remote_instance == instance:
+                    continue
+                remote_sync_config = remote_instance.create_sync_user(instance.host_org, instance.hostname)
+                remote_sync_config.name = f'Sync with {remote_sync_config.Organisation["name"]}'
+                instance.configure_sync(remote_sync_config)
+
     def dump_all_auth(self):
         auth = []
         for instance in self.instances + [self.central_node]:
@@ -327,6 +336,7 @@ class MISPInstances():
 
 if __name__ == '__main__':
     instances = MISPInstances()
+    instances.setup_sync_all()
     instances.dump_all_auth()
     with (instances.misp_instances_dir / 'auth.json').open() as f:
         print(f.read())
