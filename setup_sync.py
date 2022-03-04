@@ -299,12 +299,12 @@ class MISPInstances():
             for user in instance.site_admin_connector.users():
                 if user.change_pw in ['1', True, 1]:
                     # Only change the password if the user never logged in.
-                    password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
-                    user = instance.site_admin_connector.update_user({'password': password}, user.id)
+                    user.password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+                    instance.site_admin_connector.update_user({'password': user.password}, user.id)
                 else:
-                    password = 'Already changed by the user'
+                    user.password = 'Already changed by the user'
                 a = {'url': instance.baseurl, 'login': user.email, 'authkey': user.authkey,
-                     'password': password}
+                     'password': user.password}
                 auth.append(a)
 
         with (self.misp_instances_dir / 'auth.json').open('w') as f:
