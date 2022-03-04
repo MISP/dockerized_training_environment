@@ -297,7 +297,7 @@ class MISPInstances():
         auth = []
         for instance in self.instances + [self.central_node]:
             for user in instance.site_admin_connector.users():
-                if user.change_pw == '1':
+                if user.change_pw in ['1', True, 1]:
                     # Only change the password if the user never logged in.
                     password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
                     user = instance.site_admin_connector.update_user({'password': password}, user.id)
