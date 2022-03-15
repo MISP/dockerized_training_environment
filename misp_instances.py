@@ -37,8 +37,8 @@ def create_or_update_site_admin(connector: PyMISP, user: MISPUser) -> MISPUser:
 class MISPInstance():
     owner_orgname: str
     site_admin: PyMISP
-    _owner_site_admin: Optional[PyMISP]
-    _owner_orgadmin: Optional[PyMISP]
+    _owner_site_admin: Optional[PyMISP] = None
+    _owner_orgadmin: Optional[PyMISP] = None
 
     @property
     def host_org(self) -> MISPOrganisation:
@@ -78,7 +78,7 @@ class MISPInstance():
                 user.password = 'Already changed by the user'
             self.config['site_admin_password'] = user.password
         self._owner_site_admin = PyMISP(self.baseurl, user.authkey,  # type: ignore
-                                        ssl=secure_connection, debug=False)
+                                        ssl=secure_connection, debug=False, timeout=300)
         self._owner_site_admin.toggle_global_pythonify()
         if dump_config:
             with self.config_file.open('w') as f:
@@ -119,7 +119,7 @@ class MISPInstance():
             self.config['orgadmin_password'] = user.password
         # This user might have been disabled by the users
         self._owner_orgadmin = PyMISP(self.baseurl, user.authkey,  # type: ignore
-                                      ssl=secure_connection, debug=False)
+                                      ssl=secure_connection, debug=False, timeout=300)
         self._owner_orgadmin.toggle_global_pythonify()
         if dump_config:
             with self.config_file.open('w') as f:
@@ -135,7 +135,7 @@ class MISPInstance():
         self.baseurl = self.config['baseurl']
         self.hostname = self.config['hostname']
         self.site_admin = PyMISP(self.baseurl, self.config['admin_key'],
-                                 ssl=secure_connection, debug=False)
+                                 ssl=secure_connection, debug=False, timeout=300)
         self.site_admin.toggle_global_pythonify()
 
         # Get container name
@@ -162,6 +162,9 @@ class MISPInstance():
         self.owner_site_admin.set_server_setting('MISP.host_org_id', self.host_org.id)
         self.owner_site_admin.set_server_setting('Security.rest_client_baseurl', 'http://127.0.0.1')
 
+        # init the orgadmin (not site) user
+        self.owner_orgadmin
+
     def pass_command_to_docker(self, command):
         cur_dir = os.getcwd()
         os.chdir(self.docker_compose_root)
@@ -178,9 +181,9 @@ class MISPInstance():
     def update_external_baseurl(self):
         command = f'sudo docker inspect -f "{{{{.NetworkSettings.Networks.{internal_network_name}.IPAddress}}}}" {self.misp_container_name}'
         outs, errs = self.pass_command_to_docker(command)
-        internal_ip = outs.strip()
+        internal_ip = outs.strip().decode()
         external_baseurl = f'http://{internal_ip}'
-        if external_baseurl != self.external_baseurl:
+        if external_baseurl != self.config['external_baseurl']:
             self.config['external_baseurl'] = external_baseurl
             self.update_misp_server_setting('MISP.external_baseurl', external_baseurl)
             with self.config_file.open('w') as f:
@@ -190,7 +193,6 @@ class MISPInstance():
         for taxonomy in self.owner_site_admin.taxonomies():
             if taxonomy.namespace in enabled_taxonomies:
                 self.owner_site_admin.enable_taxonomy(taxonomy)
-                self.owner_site_admin.enable_taxonomy_tags(taxonomy)
 
     def update_misp_server_setting(self, key, value):
         self.owner_site_admin.set_server_setting(key, value)
@@ -323,7 +325,7 @@ class MISPInstance():
         sync_user = self.create_or_update_user(user)
         sync_user.authkey = self.owner_site_admin.get_new_authkey(sync_user)
 
-        sync_user_connector = PyMISP(self.owner_site_admin.root_url, sync_user.authkey, ssl=self.secure_connection, debug=False)
+        sync_user_connector = PyMISP(self.owner_site_admin.root_url, sync_user.authkey, ssl=secure_connection, debug=False)
         return sync_user_connector.get_sync_config(pythonify=True)
 
     def configure_sync(self, server_sync_config, from_central_node=False):
@@ -333,7 +335,8 @@ class MISPInstance():
                 server = s
                 break
         else:
-            server = self.owner_site_admin.import_server(server_sync_config)
+            print(server_sync_config.to_json())
+            server = self.owner_site_admin.import_server(server_sync_config, pythonify=True)
         server.pull = False
         server.push = True  # Not automatic, but allows to do a push
         server.unpublish_event = unpublish_on_sync
@@ -395,6 +398,8 @@ class MISPInstances():
 
         self.client_nodes = {}
         for path in self.misp_instances_dir.glob(f'{self.prefix_client_node}*'):
+            if path.name == central_node_name:
+                continue
             instance = MISPInstance(path / 'config.json')
             self.client_nodes[instance.owner_orgname] = instance
 
@@ -438,8 +443,9 @@ class MISPInstances():
             instance.configure_sync(sync_server_config)
 
     def setup_sync_all(self):
-        for instance in list(self.client_nodes.values()) + [self.central_node]:
-            for remote_instance in self.instances:
+        instances = list(self.client_nodes.values()) + [self.central_node]
+        for instance in instances:
+            for remote_instance in instances:
                 if remote_instance == instance:
                     continue
                 remote_sync_config = remote_instance.create_sync_user(instance.host_org, instance.hostname)
