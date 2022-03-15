@@ -34,6 +34,7 @@ class MISPInstance():
                 user.authkey = self.config.get('site_admin_authkey')
                 if not user.authkey:
                     user.authkey = self.site_admin.get_new_authkey(user)
+                    self.config['site_admin_authkey'] = user.authkey
                     dump_config = True
                 self.owner_site_admin = PyMISP(self.config['baseurl'], user.authkey,
                                                ssl=secure_connection, debug=False)
@@ -42,6 +43,7 @@ class MISPInstance():
                     user.authkey = self.config.get('orgadmin_authkey')
                     if not user.authkey:
                         user.authkey = self.site_admin.get_new_authkey(user)
+                        self.config['orgadmin_authkey'] = user.authkey
                         dump_config = True
                     # This user might have been disabled by the users
                     self.owner_orgadmin = PyMISP(self.config['baseurl'], user.authkey,
