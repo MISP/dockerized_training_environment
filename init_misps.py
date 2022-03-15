@@ -109,6 +109,15 @@ class MISPDocker():
             if to_append not in docker_content['services']['misp']['volumes']:
                 docker_content['services']['misp']['volumes'].append(to_append)
 
+        # Add user defined event warnings
+        user_defined_eventwarning_path = (self.misp_docker_dir / '..' / '..' / 'eventwarnings').resolve()
+        for eventwarning in user_defined_eventwarning_path.glob('*.php'):
+            if not eventwarning.is_file():
+                continue
+            to_append = f'{eventwarning}:/var/www/MISP/app/Lib/EventWarning/Custom/{eventwarning.name}/:ro'
+            if to_append not in docker_content['services']['misp']['volumes']:
+                docker_content['services']['misp']['volumes'].append(to_append)
+
         # Add network configuration so all the containers are on the same
         if not docker_content['services']['misp'].get('networks'):
             # Setup the environment variables
