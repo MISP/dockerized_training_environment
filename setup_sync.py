@@ -169,13 +169,15 @@ class MISPInstance():
                 push_tags.append(tag)
 
         # Set limit on sync config
-        # # Push
-        filter_tag_push = {"tags": {'OR': list(set([t.id for t in push_tags])), 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
-        server.push_rules = json.dumps(filter_tag_push)
-        # # Pull
-        filter_tag_pull = {"tags": {'OR': list(set([t.name for t in pull_tags])), 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
-        server.pull_rules = json.dumps(filter_tag_pull)
-        server = self.site_admin_connector.update_server(server)
+        if push_tags:
+            # # Push
+            filter_tag_push = {"tags": {'OR': list(set([t.id for t in push_tags])), 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
+            server.push_rules = json.dumps(filter_tag_push)
+        if pull_tags:
+            # # Pull
+            filter_tag_pull = {"tags": {'OR': list(set([t.name for t in pull_tags])), 'NOT': []}, 'orgs': {'OR': [], 'NOT': []}}
+            server.pull_rules = json.dumps(filter_tag_pull)
+            server = self.site_admin_connector.update_server(server)
 
         # Add sharing group
         for sg in self.site_admin_connector.sharing_groups():
