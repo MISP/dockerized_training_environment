@@ -9,8 +9,8 @@ from misp_instances import MISPInstances
 
 def auth_from_config(config):
     auth_admin = {'url': config['baseurl'], 'login': 'admin@admin.test', 'authkey': config['admin_key'], 'password': config['admin_password']}
-    site_admin = {'url': config['baseurl'], 'login': config['email_site_admin'], 'authkey': config['site_admin_authkey'], 'password': 'N/A'}
-    org_admin = {'url': config['baseurl'], 'login': config['email_orgadmin'], 'authkey': config['orgadmin_authkey'], 'password': 'N/A'}
+    site_admin = {'url': config['baseurl'], 'login': config['email_site_admin'], 'authkey': config['site_admin_authkey'], 'password': config['site_admin_password']}
+    org_admin = {'url': config['baseurl'], 'login': config['email_orgadmin'], 'authkey': config['orgadmin_authkey'], 'password': config['orgadmin_password']}
     return auth_admin, site_admin, org_admin
 
 

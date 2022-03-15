@@ -3,7 +3,10 @@
 
 import json
 import os
+import random
 import shlex
+import string
+
 from subprocess import Popen, PIPE
 from pathlib import Path
 
@@ -33,18 +36,40 @@ class MISPInstance():
             if user.email == self.config['email_site_admin']:
                 user.authkey = self.config.get('site_admin_authkey')
                 if not user.authkey:
+                    dump_config = True
                     user.authkey = self.site_admin.get_new_authkey(user)
                     self.config['site_admin_authkey'] = user.authkey
+                user.password = self.config.get('site_admin_password')
+                if not user.password:
                     dump_config = True
+                    if user.change_pw in ['1', True, 1]:
+                        # Only change the password if the user never logged in.
+                        user.password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+                        self.site_admin.update_user({'password': user.password}, user.id)
+                    else:
+                        user.password = 'Already changed by the user'
+                    self.config['site_admin_password'] = user.password
+
                 self.owner_site_admin = PyMISP(self.config['baseurl'], user.authkey,
                                                ssl=secure_connection, debug=False)
             if user.email == self.config['email_orgadmin']:
                 try:
                     user.authkey = self.config.get('orgadmin_authkey')
                     if not user.authkey:
+                        dump_config = True
                         user.authkey = self.site_admin.get_new_authkey(user)
                         self.config['orgadmin_authkey'] = user.authkey
+
+                    user.password = self.config.get('orgadmin_password')
+                    if not user.password:
                         dump_config = True
+                        if user.change_pw in ['1', True, 1]:
+                            # Only change the password if the user never logged in.
+                            user.password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+                            self.site_admin.update_user({'password': user.password}, user.id)
+                        else:
+                            user.password = 'Already changed by the user'
+                        self.config['orgadmin_password'] = user.password
                     # This user might have been disabled by the users
                     self.owner_orgadmin = PyMISP(self.config['baseurl'], user.authkey,
                                                  ssl=secure_connection, debug=False)
