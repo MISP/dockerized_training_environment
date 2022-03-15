@@ -27,19 +27,31 @@ class MISPInstance():
         self.site_admin = PyMISP(self.config['baseurl'], self.config['admin_key'],
                                  ssl=secure_connection, debug=False)
 
+        dump_config = False
         # Initialize connectors for other main accounts
         for user in self.site_admin.users(pythonify=True):
             if user.email == self.config['email_site_admin']:
+                user.authkey = self.config.get('site_admin_authkey')
+                if not user.authkey:
+                    user.authkey = self.site_admin.get_new_authkey(user)
+                    dump_config = True
                 self.owner_site_admin = PyMISP(self.config['baseurl'], user.authkey,
                                                ssl=secure_connection, debug=False)
             if user.email == self.config['email_orgadmin']:
                 try:
+                    user.authkey = self.config.get('orgadmin_authkey')
+                    if not user.authkey:
+                        user.authkey = self.site_admin.get_new_authkey(user)
+                        dump_config = True
                     # This user might have been disabled by the users
                     self.owner_orgadmin = PyMISP(self.config['baseurl'], user.authkey,
                                                  ssl=secure_connection, debug=False)
                 except Exception:
                     self.owner_orgadmin = None
 
+        if dump_config:
+            with self.config_file.open('w') as f:
+                json.dump(self.config, f, indent=2)
         # Get container name
         cur_dir = os.getcwd()
         os.chdir(self.docker_compose_root)
@@ -82,6 +94,9 @@ class MISPInstance():
 
     def direct_call(self, url_path, payload=None):
         return self.owner_site_admin.direct_call(url_path, payload)
+
+    def update_misp(self):
+        self.owner_site_admin.update_misp()
 
     def update_all_json(self):
         self.owner_site_admin.update_object_templates()
