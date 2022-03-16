@@ -73,7 +73,7 @@ class MISPInstance():
             if user.change_pw in ['1', True, 1]:  # type: ignore
                 # Only change the password if the user never logged in.
                 user.password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
-                self.site_admin.update_user({'password': user.password}, user.id)  # type: ignore
+                self.site_admin.update_user({'password': user.password, 'change_pw': 0}, user.id)  # type: ignore
             else:
                 user.password = 'Already changed by the user'
             self.config['site_admin_password'] = user.password
@@ -113,7 +113,7 @@ class MISPInstance():
             if user.change_pw in ['1', True, 1]:  # type: ignore
                 # Only change the password if the user never logged in.
                 user.password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
-                self.site_admin.update_user({'password': user.password}, user.id)  # type: ignore
+                self.site_admin.update_user({'password': user.password, 'change_pw': 0}, user.id)  # type: ignore
             else:
                 user.password = 'Already changed by the user'
             self.config['orgadmin_password'] = user.password
@@ -137,6 +137,8 @@ class MISPInstance():
         self.site_admin = PyMISP(self.baseurl, self.config['admin_key'],
                                  ssl=secure_connection, debug=False, timeout=300)
         self.site_admin.toggle_global_pythonify()
+        admin_user = self.site_admin.get_user()
+        self.site_admin.update_user({'change_pw': 0}, admin_user.id)  # type: ignore
 
         # Get container name
         cur_dir = os.getcwd()
@@ -337,7 +339,7 @@ class MISPInstance():
         else:
             print(server_sync_config.to_json())
             server = self.owner_site_admin.import_server(server_sync_config, pythonify=True)
-        server.pull = False
+        server.pull = True
         server.push = True  # Not automatic, but allows to do a push
         server.unpublish_event = unpublish_on_sync
         server = self.owner_site_admin.update_server(server)
