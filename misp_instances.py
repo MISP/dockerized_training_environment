@@ -205,7 +205,9 @@ class MISPInstance():
         return self.owner_site_admin.direct_call(url_path, payload)
 
     def update_misp(self):
-        self.owner_site_admin.update_misp()
+        response = self.owner_site_admin.update_misp()
+        if response['status'] != 0:
+            print(json.dumps(response, indent=2))
 
     def update_all_json(self):
         self.owner_site_admin.update_object_templates()
