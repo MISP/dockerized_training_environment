@@ -342,6 +342,7 @@ class MISPInstance():
         server.pull = True
         server.push = True  # Not automatic, but allows to do a push
         server.unpublish_event = unpublish_on_sync
+        server.url = server_sync_config.url  # In case the internal IP changed, we want to update that.
         server = self.owner_site_admin.update_server(server)
         r = self.owner_site_admin.test_server(server)
         if r['status'] != 1:
@@ -405,6 +406,7 @@ class MISPInstances():
             instance = MISPInstance(path / 'config.json')
             self.client_nodes[instance.owner_orgname] = instance
 
+    def setup_instances(self):
         # Init tags from config
         # # Central Node
         # Locals tags for central node, not sync'ed
