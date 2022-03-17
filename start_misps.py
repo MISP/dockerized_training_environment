@@ -27,3 +27,4 @@ for path in root_misps.glob(f'{prefix_client_node}*'):
 
 instances = MISPInstances()
 instances.refresh_external_baseurls()
+instances.update_all_instances()

@@ -485,15 +485,20 @@ class MISPInstances():
         for server in self.central_node.owner_site_admin.servers():
             instance_name = ' '.join(server.name.split(' ')[-2:])
             if instance_name in nodes_external_baseurls:
-                server.url = nodes_external_baseurls[instance_name]
-                self.central_node.owner_site_admin.update_server(server)
+                self.central_node.owner_site_admin.update_server({'url': nodes_external_baseurls[instance_name]}, server.id)
 
         for instance in self.client_nodes.values():
             for server in instance.owner_site_admin.servers():
                 instance_name = ' '.join(server.name.split(' ')[-2:])
                 if instance_name in nodes_external_baseurls:
-                    server.url = nodes_external_baseurls[instance_name]
-                    self.central_node.owner_site_admin.update_server(server)
+                    self.central_node.owner_site_admin.update_server({'url': nodes_external_baseurls[instance_name]}, server.id)
+
+    def update_all_instances(self):
+        self.central_node.update_misp()
+        self.central_node.update_all_json()
+        for instance in self.client_nodes.values():
+            instance.update_misp()
+            instance.update_all_json()
 
     def cleanup_all_blacklisted_event(self):
         to_delete_on_yt = []
