@@ -485,13 +485,15 @@ class MISPInstances():
         for server in self.central_node.owner_site_admin.servers():
             instance_name = ' '.join(server.name.split(' ')[-2:])
             if instance_name in nodes_external_baseurls:
-                self.central_node.owner_site_admin.update_server({'url': nodes_external_baseurls[instance_name]}, server.id)
+                server.url = nodes_external_baseurls[instance_name]
+                self.central_node.owner_site_admin.update_server(server)
 
         for instance in self.client_nodes.values():
             for server in instance.owner_site_admin.servers():
                 instance_name = ' '.join(server.name.split(' ')[-2:])
                 if instance_name in nodes_external_baseurls:
-                    self.central_node.owner_site_admin.update_server({'url': nodes_external_baseurls[instance_name]}, server.id)
+                    server.url = nodes_external_baseurls[instance_name]
+                    instance.owner_site_admin.update_server(server)
 
     def update_all_instances(self):
         self.central_node.update_misp()

@@ -199,6 +199,12 @@ class MISPDocker():
     def initial_misp_setup(self):
         cur_dir = os.getcwd()
         os.chdir(self.misp_docker_dir)
+        # Remove pymisp directory, blocks update
+        command = shlex.split('sudo docker-compose exec -T misp /bin/rm -rf /var/www/MISP/PyMISP')
+        _print_output(command)
+        # revert change in default config, blocks update
+        command = shlex.split('sudo docker-compose exec -T misp /usr/bin/git checkout -- /var/www/MISP/app/Config/config.default.php')
+        _print_output(command)
         # Change perms
         command = shlex.split('sudo docker-compose exec -T misp /bin/chown -R www-data:www-data /var/www/MISP')
         _print_output(command)
