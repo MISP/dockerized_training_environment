@@ -187,6 +187,7 @@ class MISPInstance():
             self.update_misp_server_setting('MISP.external_baseurl', external_baseurl)
             with self.config_file.open('w') as f:
                 json.dump(self.config, f, indent=2)
+        return external_baseurl
 
     def enable_default_taxonomies(self):
         for taxonomy in self.owner_site_admin.taxonomies():
@@ -476,10 +477,10 @@ class MISPInstances():
     def refresh_external_baseurls(self):
         '''When the docker containers restart, the internal IPs may change.
         This method update the the config files and the sync links'''
-        central_node_external_baseurl = self.central_node.get_current_external_baseurl()
+        central_node_external_baseurl = self.central_node.update_external_baseurl()
         nodes_external_baseurls = {self.central_node.owner_orgname: central_node_external_baseurl}
         for name, instance in self.client_nodes.items():
-            nodes_external_baseurls[name] = instance.get_current_external_baseurl()
+            nodes_external_baseurls[name] = instance.update_external_baseurl()
 
         for server in self.central_node.owner_site_admin.servers():
             instance_name = ' '.join(server.name.split(' ')[-2:])
