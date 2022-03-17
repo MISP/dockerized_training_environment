@@ -148,24 +148,21 @@ class MISPInstance():
         self.misp_container_name = p.communicate()[0].decode().strip()
         os.chdir(cur_dir)
 
-        # Update everything
-        self.update_misp()
-        self.update_all_json()
+        # Make sure the external baseurl is set
+        self.update_external_baseurl()
+        # init the orgadmin (not site) user
+        self.owner_orgadmin
+
         # Set the default role (id 3 is normal user)
         self.owner_site_admin.set_default_role(3)
         # Set the default sharing level to "All communities"
         self.owner_site_admin.set_server_setting('MISP.default_event_distribution', 3, force=True)
         # Enable taxonomies
         self.enable_default_taxonomies()
-        # Make sure the external baseurl is set
-        self.update_external_baseurl()
         # Set remaining config
         self.owner_site_admin.set_server_setting('MISP.baseurl', self.baseurl, force=True)
         self.owner_site_admin.set_server_setting('MISP.host_org_id', self.host_org.id)
         self.owner_site_admin.set_server_setting('Security.rest_client_baseurl', 'http://127.0.0.1')
-
-        # init the orgadmin (not site) user
-        self.owner_orgadmin
 
     def pass_command_to_docker(self, command):
         cur_dir = os.getcwd()
@@ -407,6 +404,8 @@ class MISPInstances():
             self.client_nodes[instance.owner_orgname] = instance
 
     def setup_instances(self):
+        self.central_node.update_misp()
+        self.central_node.update_all_json()
         # Init tags from config
         # # Central Node
         # Locals tags for central node, not sync'ed
@@ -426,6 +425,8 @@ class MISPInstances():
 
         # # Client Nodes
         for owner_org_name, instance in self.client_nodes.items():
+            instance.update_misp()
+            instance.update_all_json()
             for tagname in local_tags_clients:
                 instance.create_tag(tagname, False, True)
             for tagname in tag_nodes_to_central:
