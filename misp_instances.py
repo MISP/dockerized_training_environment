@@ -209,7 +209,7 @@ class MISPInstance():
 
     def update_misp(self):
         response = self.owner_site_admin.update_misp()
-        if response['status'] != 0:
+        if response['results'][0]['status'] != 0:
             print(json.dumps(response, indent=2))
 
     def update_all_json(self):
