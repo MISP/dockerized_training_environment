@@ -146,6 +146,9 @@ class MISPInstance():
         command = shlex.split('sudo docker-compose ps -q misp')
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         self.misp_container_name = p.communicate()[0].decode().strip()
+        # trash PyMISP so we can update
+        command = shlex.split('sudo docker-compose exec -T misp /bin/rm -rf /var/www/MISP/PyMISP')
+        Popen(command, stdout=PIPE, stderr=PIPE)
         os.chdir(cur_dir)
 
         # Make sure the external baseurl is set
