@@ -152,7 +152,7 @@ class MISPInstance():
         os.chdir(cur_dir)
 
         # Make sure the external baseurl is set
-        self.update_external_baseurl()
+        self.update_external_baseurl(force=True)
         # init the orgadmin (not site) user
         self.owner_orgadmin
 
@@ -180,12 +180,12 @@ class MISPInstance():
         '''Copy/paste a file from HOST to the docker filesystem (MISP container)'''
         return self.pass_command_to_docker(f'docker cp {src} {self.misp_container_name}:{dst}')
 
-    def update_external_baseurl(self):
+    def update_external_baseurl(self, force: bool=False):
         command = f'sudo docker inspect -f "{{{{.NetworkSettings.Networks.{internal_network_name}.IPAddress}}}}" {self.misp_container_name}'
         outs, errs = self.pass_command_to_docker(command)
         internal_ip = outs.strip().decode()
         external_baseurl = f'http://{internal_ip}'
-        if external_baseurl != self.config['external_baseurl']:
+        if force or external_baseurl != self.config['external_baseurl']:
             self.config['external_baseurl'] = external_baseurl
             self.update_misp_server_setting('MISP.external_baseurl', external_baseurl)
             with self.config_file.open('w') as f:
@@ -198,7 +198,7 @@ class MISPInstance():
                 self.owner_site_admin.enable_taxonomy(taxonomy)
 
     def update_misp_server_setting(self, key, value):
-        self.owner_site_admin.set_server_setting(key, value)
+        return self.owner_site_admin.set_server_setting(key, value)
 
     def change_session_timeout(self, timeout):
         self.update_misp_server_setting('Session.timeout', timeout)
