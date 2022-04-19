@@ -499,6 +499,10 @@ class MISPInstances():
                 if instance_name in nodes_external_baseurls:
                     server.url = nodes_external_baseurls[instance_name]
                     instance.owner_site_admin.update_server(server)
+                else:
+                    # central node
+                    server.url = central_node_external_baseurl
+                    instance.owner_site_admin.update_server(server)
 
     def update_all_instances(self):
         self.central_node.update_misp()
