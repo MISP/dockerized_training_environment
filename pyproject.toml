@@ -5,16 +5,16 @@ description = ""
 authors = ["Raphaël Vinot <raphael@vinot.info>"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
-gitpython = "^3.1.0"
-pymisp = "^2.4.155.1"
-pyyaml = "^5.3"
+python = "^3.8"
+gitpython = "^3.1.29"
+pymisp = "^2.4.166"
+pyyaml = "^6.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
-ipython = "^7.13.0"
-mypy = "^0.941"
-types-PyYAML = "^6.0.4"
+pytest = "^7.2.0"
+ipython = "^8.7.0"
+mypy = "^0.991"
+types-PyYAML = "^6.0.12.2"
 
 [build-system]
 requires = ["poetry_core>=1.0", "setuptools"]
