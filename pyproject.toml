@@ -6,15 +6,15 @@ authors = ["Raphaël Vinot <raphael@vinot.info>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-gitpython = "^3.1.29"
-pymisp = "^2.4.166"
+gitpython = "^3.1.30"
+pymisp = "^2.4.167.2"
 pyyaml = "^6.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.2.0"
-ipython = "^8.7.0"
+pytest = "^7.2.1"
+ipython = "^8.8.0"
 mypy = "^0.991"
-types-PyYAML = "^6.0.12.2"
+types-PyYAML = "^6.0.12.3"
 
 [build-system]
 requires = ["poetry_core>=1.0", "setuptools"]
