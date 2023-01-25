@@ -6,6 +6,7 @@ import os
 import random
 import shlex
 import string
+import time
 
 from subprocess import Popen, PIPE
 from pathlib import Path
@@ -431,8 +432,15 @@ class MISPInstances():
 
         # # Client Nodes
         for owner_org_name, instance in self.client_nodes.items():
-            instance.update_misp()
-            instance.update_all_json()
+            while True:
+                try:
+                    instance.update_misp()
+                    instance.update_all_json()
+                    break
+                except Exception as e:
+                    print(f'Error updating {instance}', e)
+                    time.sleep(30)
+
             for tagname in local_tags_clients:
                 instance.create_tag(tagname, False, True)
             for tagname in tag_nodes_to_central:
