@@ -6,6 +6,10 @@ internal_network_name = 'custom_misp_training_environment'
 # NOTE: There will be an extra instances (the central node), where all the client synchronize with (push)
 number_instances = 2
 
+# Name of the TLS certificate to use for https connection.
+# NOTE: you must have files called <cert_name>.crt and <cert_name>.key in the certs directory
+cert_name = ''
+
 url_scheme = 'http'
 central_node_name = 'misp-central'
 prefix_client_node = 'misp-'
