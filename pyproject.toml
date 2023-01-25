@@ -7,7 +7,7 @@ authors = ["Raphaël Vinot <raphael@vinot.info>"]
 [tool.poetry.dependencies]
 python = "^3.8"
 gitpython = "^3.1.30"
-pymisp = "^2.4.167.2"
+pymisp = "^2.4.168"
 pyyaml = "^6.0"
 
 [tool.poetry.dev-dependencies]
