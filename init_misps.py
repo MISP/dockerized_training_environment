@@ -266,7 +266,7 @@ class MISPDockerManager():
 
     def _create_docker_internal_network(self):
         # Initialize network (does nothing if already existing)
-        command = shlex.split(f'sudo docker network create {self.internal_network_name}')
+        command = shlex.split(f'sudo docker network create {self.internal_network_name} --subnet=172.19.0.0/16')
         _print_output(command)
 
     @property
