@@ -181,7 +181,7 @@ class MISPDocker():
         cur_dir = os.getcwd()
         os.chdir(self.misp_docker_dir)
         # Run the dockers
-        command = shlex.split('sudo docker-compose up -d')
+        command = shlex.split('sudo docker-compose up -d --force-recreate')
         _print_output(command)
         # Get IP on docker
         # # Get thing to inspect
@@ -266,7 +266,7 @@ class MISPDockerManager():
 
     def _create_docker_internal_network(self):
         # Initialize network (does nothing if already existing)
-        command = shlex.split(f'sudo docker network create {self.internal_network_name} --subnet=172.19.0.0/16')
+        command = shlex.split(f'sudo docker network create {self.internal_network_name} --subnet=172.24.0.0/24')
         _print_output(command)
 
     @property

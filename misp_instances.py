@@ -214,11 +214,16 @@ class MISPInstance():
             print(json.dumps(response, indent=2))
 
     def update_all_json(self):
-        self.owner_site_admin.update_object_templates()
-        self.owner_site_admin.update_galaxies()
-        self.owner_site_admin.update_taxonomies()
-        self.owner_site_admin.update_warninglists()
-        self.owner_site_admin.update_noticelists()
+        while True:
+            try:
+                self.owner_site_admin.update_object_templates()
+                self.owner_site_admin.update_galaxies()
+                self.owner_site_admin.update_taxonomies()
+                self.owner_site_admin.update_warninglists()
+                self.owner_site_admin.update_noticelists()
+            except Exception as e:
+                print(f'Unable to update something: {e}')
+                time.sleep(5)
 
     def sync_push_all(self):
         for server in self.owner_site_admin.servers():
