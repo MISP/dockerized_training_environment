@@ -69,9 +69,9 @@ class MISPInstance():
             user.authkey = self.site_admin.get_new_authkey(user)
             self.config['site_admin_authkey'] = user.authkey  # type: ignore
         user.password = self.config.get('site_admin_password')
-        if not user.password:
+        if not user.password or self.force_reset_passwords:
             dump_config = True
-            if user.change_pw in ['1', True, 1]:  # type: ignore
+            if user.change_pw in ['1', True, 1] or self.force_reset_passwords:  # type: ignore
                 # Only change the password if the user never logged in.
                 user.password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
                 self.site_admin.update_user({'password': user.password, 'change_pw': 0}, user.id)  # type: ignore
@@ -109,9 +109,9 @@ class MISPInstance():
             self.config['orgadmin_authkey'] = user.authkey  # type: ignore
 
         user.password = self.config.get('orgadmin_password')
-        if not user.password:
+        if not user.password or self.force_reset_passwords:
             dump_config = True
-            if user.change_pw in ['1', True, 1]:  # type: ignore
+            if user.change_pw in ['1', True, 1] or self.force_reset_passwords:  # type: ignore
                 # Only change the password if the user never logged in.
                 user.password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
                 self.site_admin.update_user({'password': user.password, 'change_pw': 0}, user.id)  # type: ignore
@@ -127,8 +127,9 @@ class MISPInstance():
                 json.dump(self.config, f, indent=2)
         return self._owner_orgadmin
 
-    def __init__(self, config_file: Path):
+    def __init__(self, config_file: Path, force_reset_passwords: bool=False):
         self.config_file = config_file
+        self.force_reset_passwords = force_reset_passwords
         self.docker_compose_root = self.config_file.parent
         with config_file.open() as f:
             self.config = json.load(f)
@@ -405,15 +406,15 @@ class MISPInstances():
     central_node_name = central_node_name
     prefix_client_node = prefix_client_node
 
-    def __init__(self, root_misps: str='misps'):
+    def __init__(self, root_misps: str='misps', force_reset_passwords: bool=False):
         self.misp_instances_dir = Path(__file__).resolve().parent / root_misps
-        self.central_node = MISPInstance(self.misp_instances_dir / self.central_node_name / 'config.json')
+        self.central_node = MISPInstance(self.misp_instances_dir / self.central_node_name / 'config.json', force_reset_passwords)
 
         self.client_nodes = {}
         for path in self.misp_instances_dir.glob(f'{self.prefix_client_node}*'):
             if path.name == central_node_name:
                 continue
-            instance = MISPInstance(path / 'config.json')
+            instance = MISPInstance(path / 'config.json', force_reset_passwords)
             self.client_nodes[instance.owner_orgname] = instance
 
     def setup_instances(self):
