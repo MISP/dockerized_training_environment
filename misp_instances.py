@@ -198,6 +198,7 @@ class MISPInstance():
         for taxonomy in self.owner_site_admin.taxonomies():
             if taxonomy.namespace in enabled_taxonomies:
                 self.owner_site_admin.enable_taxonomy(taxonomy)
+                self.owner_site_admin.enable_taxonomy_tags(taxonomy)
 
     def update_misp_server_setting(self, key, value):
         return self.owner_site_admin.set_server_setting(key, value)
@@ -352,6 +353,7 @@ class MISPInstance():
             server = self.owner_site_admin.import_server(server_sync_config, pythonify=True)
         server.pull = True
         server.push = True  # Not automatic, but allows to do a push
+        server.push_galaxy_clusters = True
         server.unpublish_event = unpublish_on_sync
         server.url = server_sync_config.url  # In case the internal IP changed, we want to update that.
         server = self.owner_site_admin.update_server(server)
