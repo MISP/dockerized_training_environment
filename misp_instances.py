@@ -78,8 +78,13 @@ class MISPInstance():
             else:
                 user.password = 'Already changed by the user'
             self.config['site_admin_password'] = user.password
-        self._owner_site_admin = PyMISP(self.baseurl, user.authkey,  # type: ignore
-                                        ssl=secure_connection, debug=False, timeout=300)
+        while True:
+            try:
+                self._owner_site_admin = PyMISP(self.baseurl, user.authkey,  # type: ignore
+                                                ssl=secure_connection, debug=False, timeout=300)
+                break
+            except Exception as e:
+                print(e)
         self._owner_site_admin.toggle_global_pythonify()
         if dump_config:
             with self.config_file.open('w') as f:
@@ -119,8 +124,13 @@ class MISPInstance():
                 user.password = 'Already changed by the user'
             self.config['orgadmin_password'] = user.password
         # This user might have been disabled by the users
-        self._owner_orgadmin = PyMISP(self.baseurl, user.authkey,  # type: ignore
-                                      ssl=secure_connection, debug=False, timeout=300)
+        while True:
+            try:
+                self._owner_orgadmin = PyMISP(self.baseurl, user.authkey,  # type: ignore
+                                              ssl=secure_connection, debug=False, timeout=300)
+                break
+            except Exception as e:
+                print(f'Unable to connect to {self.baseurl}', e)
         self._owner_orgadmin.toggle_global_pythonify()
         if dump_config:
             with self.config_file.open('w') as f:
@@ -136,8 +146,14 @@ class MISPInstance():
         self.owner_orgname = self.config['admin_orgname']
         self.baseurl = self.config['baseurl']
         self.hostname = self.config['hostname']
-        self.site_admin = PyMISP(self.baseurl, self.config['admin_key'],
-                                 ssl=secure_connection, debug=False, timeout=300)
+        while True:
+            try:
+                self.site_admin = PyMISP(self.baseurl, self.config['admin_key'],
+                                         ssl=secure_connection, debug=False, timeout=300)
+                break
+            except Exception as e:
+                print(f'Unable to connect to {self.baseurl}', e)
+
         self.site_admin.toggle_global_pythonify()
         admin_user = self.site_admin.get_user()
         self.site_admin.update_user({'change_pw': 0}, admin_user.id)  # type: ignore
@@ -528,7 +544,12 @@ class MISPInstances():
         self.central_node.update_misp()
         self.central_node.update_all_json()
         for instance in self.client_nodes.values():
-            instance.update_misp()
+            while True:
+                try:
+                    instance.update_misp()
+                    break
+                except Exception as e:
+                    print('Unable to connect', e)
             instance.update_all_json()
 
     def cleanup_all_blacklisted_event(self):
