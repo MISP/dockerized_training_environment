@@ -12,7 +12,7 @@ from subprocess import Popen, PIPE
 from pathlib import Path
 from typing import Optional
 
-from pymisp import PyMISP, MISPUser, MISPTag, MISPOrganisation, MISPSharingGroup
+from pymisp import PyMISP, MISPUser, MISPTag, MISPOrganisation, MISPSharingGroup, MISPEvent
 
 from generic_config import (central_node_name, prefix_client_node, secure_connection,
                             internal_network_name, enabled_taxonomies, unpublish_on_sync,
@@ -306,8 +306,9 @@ class MISPInstance():
         manifest = {}
         hashes = []
         for event in self.owner_site_admin.search(metadata=True):
-            e = self.owner_site_admin.get_event(event.uuid, deleted=True)  # type: ignore
-            e_feed = e.to_feed(with_meta=True)  # type: ignore
+            e: MISPEvent = self.owner_site_admin.get_event(event.uuid, deleted=True)  # type: ignore
+            e_feed = e.to_feed(with_meta=True, with_distribution=True,
+                               with_local_tags=True, with_event_reports=True)
             hashes += [[h, e.uuid] for h in e_feed['Event'].pop('_hashes')]  # type: ignore
             manifest.update(e_feed['Event'].pop('_manifest'))
             with (feed_dir / f'{event.uuid}.json').open('w') as _fw:  # type: ignore
