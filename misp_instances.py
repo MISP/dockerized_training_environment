@@ -165,9 +165,11 @@ class MISPInstance():
         # Enable taxonomies
         self.enable_default_taxonomies()
         # Set remaining config
+        self.owner_site_admin.set_server_setting('MISP.welcome_text_top', '', force=True)
         self.owner_site_admin.set_server_setting('MISP.baseurl', self.baseurl, force=True)
         self.owner_site_admin.set_server_setting('MISP.host_org_id', self.host_org.id)
         self.owner_site_admin.set_server_setting('Security.rest_client_baseurl', 'http://127.0.0.1')
+        self.change_session_timeout(6000)
 
     def pass_command_to_docker(self, command):
         cur_dir = os.getcwd()
@@ -544,7 +546,7 @@ class MISPInstances():
             instance.delete_events(to_delete_on_bts)
 
     def dump_all_stats(self, dump_to: str):
-        dest_dir = Path(dump_to)
+        dest_dir = self.misp_instances_dir / dump_to
         dest_dir.mkdir(exist_ok=True)
         central_node_stats = self.central_node.user_statistics()
 
@@ -559,7 +561,7 @@ class MISPInstances():
             json.dump(client_nodes_stats, f)
 
     def dump_all_events(self):
-        root_dir = Path('feeds')
+        root_dir = self.misp_instances_dir / 'feeds'
         self.central_node.dump_all_events_as_feed(root_dir)
         for name, instance in self.client_nodes.items():
             instance.dump_all_events_as_feed(root_dir)
