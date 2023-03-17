@@ -85,6 +85,7 @@ class MISPInstance():
                 break
             except Exception as e:
                 print(e)
+                time.sleep(5)
         self._owner_site_admin.toggle_global_pythonify()
         if dump_config:
             with self.config_file.open('w') as f:
@@ -131,6 +132,7 @@ class MISPInstance():
                 break
             except Exception as e:
                 print(f'Unable to connect to {self.baseurl}', e)
+                time.sleep(5)
         self._owner_orgadmin.toggle_global_pythonify()
         if dump_config:
             with self.config_file.open('w') as f:
@@ -153,6 +155,7 @@ class MISPInstance():
                 break
             except Exception as e:
                 print(f'Unable to connect to {self.baseurl}', e)
+                time.sleep(5)
 
         self.site_admin.toggle_global_pythonify()
         admin_user = self.site_admin.get_user()
@@ -550,6 +553,7 @@ class MISPInstances():
                     break
                 except Exception as e:
                     print('Unable to connect', e)
+                    time.sleep(5)
             instance.update_all_json()
 
     def cleanup_all_blacklisted_event(self):
