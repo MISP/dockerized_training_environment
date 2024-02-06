@@ -7,4 +7,7 @@ from misp_instances import MISPInstances
 if __name__ == '__main__':
     instances = MISPInstances()
     instances.setup_instances()
-    instances.setup_sync_all()
+    # Mesh sync
+    # instances.setup_sync_all()
+    # Central only sync
+    instances.setup_sync_central_only()
