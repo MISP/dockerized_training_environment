@@ -164,11 +164,11 @@ class MISPInstance():
         # Get container name
         cur_dir = os.getcwd()
         os.chdir(self.docker_compose_root)
-        command = shlex.split('sudo docker-compose ps -q misp')
+        command = shlex.split('sudo docker compose ps -q misp')
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         self.misp_container_name = p.communicate()[0].decode().strip()
         # trash PyMISP so we can update
-        command = shlex.split('sudo docker-compose exec -T misp /bin/rm -rf /var/www/MISP/PyMISP')
+        command = shlex.split('sudo docker compose exec -T misp /bin/rm -rf /var/www/MISP/PyMISP')
         Popen(command, stdout=PIPE, stderr=PIPE)
         os.chdir(cur_dir)
 

@@ -163,7 +163,7 @@ class MISPDocker():
         command = shlex.split('sudo cat ./.env')
         _print_output(command)
         # Build the dockers
-        command = shlex.split('sudo docker-compose -f docker-compose.yml -f build-docker-compose.yml build')
+        command = shlex.split('sudo docker compose -f docker-compose.yml -f build-docker-compose.yml build')
         p = Popen(command)
         p.wait()
         os.chdir(cur_dir)
@@ -181,11 +181,11 @@ class MISPDocker():
         cur_dir = os.getcwd()
         os.chdir(self.misp_docker_dir)
         # Run the dockers
-        command = shlex.split('sudo docker-compose up -d --force-recreate')
+        command = shlex.split('sudo docker compose up -d --force-recreate')
         _print_output(command)
         # Get IP on docker
         # # Get thing to inspect
-        command = shlex.split('sudo docker-compose ps -q misp')
+        command = shlex.split('sudo docker compose ps -q misp')
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         thing = p.communicate()[0].decode().strip()
         # Yes, 4 {, we need 2 in the output string
@@ -200,31 +200,31 @@ class MISPDocker():
         cur_dir = os.getcwd()
         os.chdir(self.misp_docker_dir)
         # Remove pymisp directory, blocks update
-        command = shlex.split('sudo docker-compose exec -T misp /bin/rm -rf /var/www/MISP/PyMISP')
+        command = shlex.split('sudo docker compose exec -T misp /bin/rm -rf /var/www/MISP/PyMISP')
         _print_output(command)
         # revert change in default config, blocks update
-        command = shlex.split('sudo docker-compose exec -T misp /usr/bin/git checkout -- /var/www/MISP/app/Config/config.default.php')
+        command = shlex.split('sudo docker compose exec -T misp /usr/bin/git checkout -- /var/www/MISP/app/Config/config.default.php')
         _print_output(command)
         # Change perms
-        command = shlex.split('sudo docker-compose exec -T misp /bin/chown -R www-data:www-data /var/www/MISP')
+        command = shlex.split('sudo docker compose exec -T misp /bin/chown -R www-data:www-data /var/www/MISP')
         _print_output(command)
         # Init admin user
-        command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake userInit')
+        command = shlex.split('sudo docker compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake userInit')
         _print_output(command)
         # Set baseurl
-        command = shlex.split(f'sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake admin setSetting MISP.baseurl {self.config["baseurl"]}')
+        command = shlex.split(f'sudo docker compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake admin setSetting MISP.baseurl {self.config["baseurl"]}')
         _print_output(command)
         # Run DB updates
-        command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin runUpdates')
+        command = shlex.split('sudo docker compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin runUpdates')
         _print_output(command)
         # Make sure the updates are all done
-        command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin updatesDone 1')
+        command = shlex.split('sudo docker compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake Admin updatesDone 1')
         _print_output(command)
         # Set the admin password
-        command = shlex.split(f'sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake User change_pw admin@admin.test {self.config["admin_password"]}')
+        command = shlex.split(f'sudo docker compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake User change_pw admin@admin.test {self.config["admin_password"]}')
         _print_output(command)
         # Get the admin key
-        command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake User change_authkey admin@admin.test')
+        command = shlex.split('sudo docker compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake User change_authkey admin@admin.test')
         print(command)
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
@@ -235,7 +235,7 @@ class MISPDocker():
         else:
             print('error:', err)
         # Turn the instance live
-        command = shlex.split('sudo docker-compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake live 1')
+        command = shlex.split('sudo docker compose exec -T --user www-data misp /bin/bash /var/www/MISP/app/Console/cake live 1')
         _print_output(command)
         os.chdir(cur_dir)
 
