@@ -140,7 +140,7 @@ class MISPDocker():
             docker_content['networks'] = {'misp-test-sync': {'external': {'name': internal_network_name}}}
 
             # do not bother with the modules
-            docker_content['services'].pop('misp-modules')
+            # docker_content['services'].pop('misp-modules')
 
         with (self.misp_docker_dir / 'docker-compose.yml').open('w') as f:
             f.write(yaml.dump(docker_content, default_flow_style=False))
