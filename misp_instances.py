@@ -523,9 +523,9 @@ class MISPInstances():
             instance.init_default_user(email, password, role_id)
 
     def sync_push_all(self):
-        self.central_node.sync_push_all()
         for instance in self.client_nodes.values():
             instance.sync_push_all()
+        self.central_node.sync_push_all()
 
     def refresh_external_baseurls(self):
         '''When the docker containers restart, the internal IPs may change.
