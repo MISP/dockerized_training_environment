@@ -376,6 +376,7 @@ class MISPInstance():
         server.pull = True
         server.push = True  # Not automatic, but allows to do a push
         server.push_galaxy_clusters = True
+        server.push_analyst_data = True
         server.unpublish_event = unpublish_on_sync
         server.url = server_sync_config.url  # In case the internal IP changed, we want to update that.
         server = self.owner_site_admin.update_server(server)
