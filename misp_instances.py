@@ -15,9 +15,9 @@ from typing import Optional
 from pymisp import PyMISP, MISPUser, MISPTag, MISPOrganisation, MISPSharingGroup, MISPEvent
 
 from generic_config import (central_node_name, prefix_client_node, secure_connection,
-                            internal_network_name, enabled_taxonomies, unpublish_on_sync,
-                            tag_central_to_nodes, tag_nodes_to_central, local_tags_central,
-                            reserved_tags_central, local_tags_clients)
+                            internal_network_name, enabled_taxonomies, enabled_taxonomies_central_node,
+                            unpublish_on_sync, tag_central_to_nodes, tag_nodes_to_central, local_tags_central,
+                            reserved_tags_central, local_tags_clients, central_node_server_settings)
 
 
 def create_or_update_site_admin(connector: PyMISP, user: MISPUser) -> MISPUser:
@@ -461,6 +461,13 @@ class MISPInstances():
 
         for tagname in tag_nodes_to_central:
             self.central_node.create_tag(tagname, False, False)
+
+        for taxonomy in enabled_taxonomies_central_node:
+            self.central_node.owner_site_admin.enable_taxonomy(taxonomy)
+            self.central_node.owner_site_admin.enable_taxonomy_tags(taxonomy)
+
+        for setting, value in central_node_server_settings.items():
+            self.central_node.update_misp_server_setting(setting, value)
 
         # # Client Nodes
         for owner_org_name, instance in self.client_nodes.items():
