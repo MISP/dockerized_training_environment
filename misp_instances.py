@@ -462,7 +462,7 @@ class MISPInstances():
         for tagname in tag_nodes_to_central:
             self.central_node.create_tag(tagname, False, False)
 
-        for taxonomy in self.owner_site_admin.taxonomies():
+        for taxonomy in self.central_node.owner_site_admin.taxonomies():
             if taxonomy.namespace in enabled_taxonomies_central_node:
                 self.central_node.owner_site_admin.enable_taxonomy(taxonomy)
                 self.central_node.owner_site_admin.enable_taxonomy_tags(taxonomy)
