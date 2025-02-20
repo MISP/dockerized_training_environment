@@ -61,7 +61,7 @@ class MISPDocker():
             self.instance_repo.git.checkout('.env')
             self.instance_repo.remote('origin').pull(rebase='false')
         else:
-            self.instance_repo = git.repo.base.Repo.clone_from('https://github.com/Rafiot/docker-misp.git', str(self.misp_docker_dir))
+            self.instance_repo = git.repo.base.Repo.clone_from('https://github.com/MISP/misp-docker.git', str(self.misp_docker_dir))
 
         print("Docker path", self.misp_docker_dir, instance_id)
         self._prepare_docker_compose()
@@ -74,13 +74,13 @@ class MISPDocker():
         with (self.misp_docker_dir / 'docker-compose.yml').open() as f:
             docker_content = yaml.safe_load(f.read())
 
-        docker_content['services']['misp']['ports'] = [f'{self.config["http_port"]}:80',
-                                                       f'{self.config["https_port"]}:443']
+        docker_content['services']['misp-core']['ports'] = [f'{self.config["http_port"]}:80',
+                                                            f'{self.config["https_port"]}:443']
 
         # Add refresh script
-        if '../../misp-refresh:/var/www/MISP/misp-refresh/' not in docker_content['services']['misp']['volumes']:
+        if '../../misp-refresh:/var/www/MISP/misp-refresh/' not in docker_content['services']['misp-core']['volumes']:
             # Add misp-refresh
-            docker_content['services']['misp']['volumes'].append('../../misp-refresh:/var/www/MISP/misp-refresh/')
+            docker_content['services']['misp-core']['volumes'].append('../../misp-refresh:/var/www/MISP/misp-refresh/')
 
         # Add user defined objects
         user_defined_objects_path = (self.misp_docker_dir / '..' / '..' / 'objects').resolve()
@@ -88,8 +88,8 @@ class MISPDocker():
             if not obj_dir.is_dir():
                 continue
             to_append = f'{obj_dir}:/var/www/MISP/app/files/misp-objects/objects/{obj_dir.name}/:ro'
-            if to_append not in docker_content['services']['misp']['volumes']:
-                docker_content['services']['misp']['volumes'].append(to_append)
+            if to_append not in docker_content['services']['misp-core']['volumes']:
+                docker_content['services']['misp-core']['volumes'].append(to_append)
 
         # Add user defined taxonomies
         user_defined_taxonomies_path = (self.misp_docker_dir / '..' / '..' / 'taxonomies').resolve()
@@ -97,8 +97,8 @@ class MISPDocker():
             if not tax_dir.is_dir():
                 continue
             to_append = f'{tax_dir}:/var/www/MISP/app/files/taxonomies/{tax_dir.name}/:ro'
-            if to_append not in docker_content['services']['misp']['volumes']:
-                docker_content['services']['misp']['volumes'].append(to_append)
+            if to_append not in docker_content['services']['misp-core']['volumes']:
+                docker_content['services']['misp-core']['volumes'].append(to_append)
 
         # Add user defined dashboards
         user_defined_dashboards_path = (self.misp_docker_dir / '..' / '..' / 'dashboards').resolve()
@@ -106,8 +106,8 @@ class MISPDocker():
             if not dashboard.is_file():
                 continue
             to_append = f'{dashboard}:/var/www/MISP/app/Lib/Dashboard/Custom/{dashboard.name}/:ro'
-            if to_append not in docker_content['services']['misp']['volumes']:
-                docker_content['services']['misp']['volumes'].append(to_append)
+            if to_append not in docker_content['services']['misp-core']['volumes']:
+                docker_content['services']['misp-core']['volumes'].append(to_append)
 
         # Add user defined event warnings
         user_defined_eventwarning_path = (self.misp_docker_dir / '..' / '..' / 'eventwarnings').resolve()
@@ -115,11 +115,11 @@ class MISPDocker():
             if not eventwarning.is_file():
                 continue
             to_append = f'{eventwarning}:/var/www/MISP/app/Lib/EventWarning/Custom/{eventwarning.name}/:ro'
-            if to_append not in docker_content['services']['misp']['volumes']:
-                docker_content['services']['misp']['volumes'].append(to_append)
+            if to_append not in docker_content['services']['misp-core']['volumes']:
+                docker_content['services']['misp-core']['volumes'].append(to_append)
 
         # Add network configuration so all the containers are on the same
-        if not docker_content['services']['misp'].get('networks'):
+        if not docker_content['services']['misp-core'].get('networks'):
             # Setup the environment variables
             environment = ['NOREDIR=true',
                            f'VIRTUAL_HOST={self.config["hostname"]}',
@@ -127,15 +127,15 @@ class MISPDocker():
                            f'HOSTNAME={self.config["hostname"]}',
                            'HTTPS_METHOD=redirect',
                            'SECURESSL=true']
-            for e in docker_content['services']['misp'].pop('environment'):
+            for e in docker_content['services']['misp-core'].pop('environment'):
                 if e.startswith('HOSTNAME'):
                     # get rid of this one
                     continue
                 # Keep the other ones
                 environment.append(e)
-            docker_content['services']['misp']['environment'] = environment
+            docker_content['services']['misp-core']['environment'] = environment
 
-            docker_content['services']['misp']['networks'] = ['default', 'misp-test-sync']
+            docker_content['services']['misp-core']['networks'] = ['default', 'misp-test-sync']
 
             docker_content['networks'] = {'misp-test-sync': {'external': {'name': internal_network_name}}}
 
