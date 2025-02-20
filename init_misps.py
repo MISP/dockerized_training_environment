@@ -147,12 +147,10 @@ class MISPDocker():
 
         # change MISP_TAG to use the HEAD
         env = []
-        with (self.misp_docker_dir / '.env').open('r') as _env:
+        with (self.misp_docker_dir / 'template.env').open('r') as _env:
             for var in _env.readlines():
-                if var.startswith("MISP_TAG"):
-                    env.append("MISP_TAG=develop")
-                else:
-                    env.append(var)
+                # TODO: Change env is needed
+                env.append(var)
 
         with (self.misp_docker_dir / '.env').open('w') as _env:
             _env.write('\n'.join(env))
@@ -163,7 +161,7 @@ class MISPDocker():
         command = shlex.split('sudo cat ./.env')
         _print_output(command)
         # Build the dockers
-        command = shlex.split('sudo docker compose -f docker-compose.yml -f build-docker-compose.yml build')
+        command = shlex.split('sudo docker compose pull')
         p = Popen(command)
         p.wait()
         os.chdir(cur_dir)
