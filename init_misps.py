@@ -58,7 +58,6 @@ class MISPDocker():
         if self.misp_docker_dir.exists():
             self.instance_repo = git.Repo(self.misp_docker_dir)
             self.instance_repo.git.checkout('docker-compose.yml')
-            self.instance_repo.git.checkout('.env')
             self.instance_repo.remote('origin').pull(rebase='false')
         else:
             self.instance_repo = git.repo.base.Repo.clone_from('https://github.com/MISP/misp-docker.git', str(self.misp_docker_dir))
