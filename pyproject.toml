@@ -3,7 +3,7 @@ name = "misp_training_environment"
 version = "0.1.0"
 description = ""
 authors = [{name="Raphaël Vinot", email="raphael@vinot.info>"}]
-requires-python = ">=3.12,<4.0"
+requires-python = ">=3.10,<4.0"
 
 dependencies = [
     "gitpython (>3.1.42)",
