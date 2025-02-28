@@ -31,6 +31,12 @@ class MISPDocker():
     def __init__(self, root_dir: Path, instance_id: int, instances_number_width: int, url_scheme: str):
         self.instance_id = instance_id
         self.url_scheme = url_scheme
+        if self.instance_id == 0:
+            self.misp_docker_dir = root_dir / central_node_name
+        else:
+            client_name = f'{prefix_client_node}{instance_id:0{instances_number_width}}'
+            self.misp_docker_dir = root_dir / client_name
+
         if config := self.load_config():
             self.config = config
         else:
@@ -42,7 +48,6 @@ class MISPDocker():
             }
 
         if self.instance_id == 0:
-            self.misp_docker_dir = root_dir / central_node_name
             self.config['baseurl'] = f'{url_scheme}://{central_node_name}{hostname_suffix}'
             self.config['hostname'] = f'{central_node_name}{hostname_suffix}'
             self.config['email_site_admin'] = f"{admin_email_name}@{self.config['hostname']}"
@@ -50,8 +55,6 @@ class MISPDocker():
             self.config['admin_orgname'] = central_node_org_name
             self.config['certname'] = f'{hostname_suffix}'.lstrip('.')
         else:
-            client_name = f'{prefix_client_node}{instance_id:0{instances_number_width}}'
-            self.misp_docker_dir = root_dir / client_name
             self.config['baseurl'] = f'{url_scheme}://{client_name}{hostname_suffix}'
             self.config['hostname'] = f'{client_name}{hostname_suffix}'
             self.config['email_site_admin'] = f"{admin_email_name}@{self.config['hostname']}"
