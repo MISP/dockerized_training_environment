@@ -120,12 +120,9 @@ class MISPDocker():
         # Add network configuration so all the containers are on the same
         if not docker_content['services']['misp-core'].get('networks'):
             # Setup the environment variables
-            environment = ['NOREDIR=true',
-                           f'VIRTUAL_HOST={self.config["hostname"]}',
+            environment = [f'VIRTUAL_HOST={self.config["hostname"]}',
                            f'CERT_NAME={self.config["certname"]}',
-                           f'HOSTNAME={self.config["hostname"]}',
-                           'HTTPS_METHOD=redirect',
-                           'SECURESSL=true']
+                           f'HOSTNAME={self.config["hostname"]}']
             for e in docker_content['services']['misp-core'].pop('environment'):
                 if e.startswith('HOSTNAME'):
                     # get rid of this one
@@ -149,7 +146,7 @@ class MISPDocker():
         with (self.misp_docker_dir / 'template.env').open('r') as _env:
             for var in _env.readlines():
                 if var.startswith('BASE_URL='):
-                    var = f'BASE_URL={self.config["hostname"]}'
+                    var = f'BASE_URL=https://{self.config["hostname"]}'
                 env.append(var.strip())
 
         with (self.misp_docker_dir / '.env').open('w') as _env:
