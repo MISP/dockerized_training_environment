@@ -147,6 +147,8 @@ class MISPDocker():
             for var in _env.readlines():
                 if var.startswith('BASE_URL='):
                     var = f'BASE_URL=https://{self.config["hostname"]}'
+                if var.startswith('# DISABLE_SSL_REDIRECT'):
+                    var = 'DISABLE_SSL_REDIRECT=true'
                 env.append(var.strip())
 
         with (self.misp_docker_dir / '.env').open('w') as _env:
