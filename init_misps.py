@@ -35,7 +35,7 @@ class MISPDocker():
             'http_port': f'80{self.instance_id}',
             'https_port': f'443{self.instance_id}',
             'admin_password': ''.join(random.choices(string.ascii_uppercase + string.digits, k=40)),
-            'admin_key': ''.join(random.choice(string.ascii_letters, k=40))
+            'admin_key': ''.join(random.choices(string.ascii_letters, k=40))
         }
 
         if self.instance_id == 0:
