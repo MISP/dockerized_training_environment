@@ -164,11 +164,11 @@ class MISPInstance():
         # Get container name
         cur_dir = os.getcwd()
         os.chdir(self.docker_compose_root)
-        command = shlex.split('sudo docker compose ps -q misp')
+        command = shlex.split('sudo docker compose ps -q misp-core')
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         self.misp_container_name = p.communicate()[0].decode().strip()
         # trash PyMISP so we can update
-        command = shlex.split('sudo docker compose exec -T misp /bin/rm -rf /var/www/MISP/PyMISP')
+        command = shlex.split('sudo docker compose exec -T misp-core /bin/rm -rf /var/www/MISP/PyMISP')
         Popen(command, stdout=PIPE, stderr=PIPE)
         os.chdir(cur_dir)
 
@@ -187,7 +187,7 @@ class MISPInstance():
         self.owner_site_admin.set_server_setting('MISP.welcome_text_top', '', force=True)
         self.owner_site_admin.set_server_setting('MISP.baseurl', self.baseurl, force=True)
         self.owner_site_admin.set_server_setting('MISP.host_org_id', self.host_org.id)
-        self.owner_site_admin.set_server_setting('Security.rest_client_baseurl', 'http://127.0.0.1')
+        # self.owner_site_admin.set_server_setting('Security.rest_client_baseurl', 'http://127.0.0.1')
         self.change_session_timeout(6000)
 
     def pass_command_to_docker(self, command):

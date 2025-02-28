@@ -243,7 +243,7 @@ class MISPDocker():
         # else:
         #    print('error:', err)
         # Turn the instance live
-        command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake live 1')
+        command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake admin live 1')
         _print_output(command)
         os.chdir(cur_dir)
 
