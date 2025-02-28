@@ -31,12 +31,15 @@ class MISPDocker():
     def __init__(self, root_dir: Path, instance_id: int, instances_number_width: int, url_scheme: str):
         self.instance_id = instance_id
         self.url_scheme = url_scheme
-        self.config = {
-            'http_port': f'80{self.instance_id}',
-            'https_port': f'443{self.instance_id}',
-            'admin_password': ''.join(random.choices(string.ascii_uppercase + string.digits, k=40)),
-            'admin_key': ''.join(random.choices(string.ascii_letters, k=40))
-        }
+        if config := self.load_config():
+            self.config = config
+        else:
+            self.config = {
+                'http_port': f'80{self.instance_id}',
+                'https_port': f'443{self.instance_id}',
+                'admin_password': ''.join(random.choices(string.ascii_uppercase + string.digits, k=40)),
+                'admin_key': ''.join(random.choices(string.ascii_letters, k=40))
+            }
 
         if self.instance_id == 0:
             self.misp_docker_dir = root_dir / central_node_name
