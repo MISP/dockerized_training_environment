@@ -183,7 +183,7 @@ class MISPDocker():
         _print_output(command)
         # Get IP on docker
         # # Get thing to inspect
-        command = shlex.split('sudo docker compose ps -q misp')
+        command = shlex.split('sudo docker compose ps -q misp-core')
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         thing = p.communicate()[0].decode().strip()
         # Yes, 4 {, we need 2 in the output string
