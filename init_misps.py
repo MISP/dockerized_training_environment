@@ -35,6 +35,7 @@ class MISPDocker():
             'http_port': f'80{self.instance_id}',
             'https_port': f'443{self.instance_id}',
             'admin_password': ''.join(random.choices(string.ascii_uppercase + string.digits, k=40)),
+            'admin_key': ''.join(random.choice(string.ascii_letters, k=40))
         }
 
         if self.instance_id == 0:
@@ -147,8 +148,12 @@ class MISPDocker():
             for var in _env.readlines():
                 if var.startswith('BASE_URL='):
                     var = f'BASE_URL=https://{self.config["hostname"]}'
-                if var.startswith('# DISABLE_SSL_REDIRECT'):
+                elif 'DISABLE_SSL_REDIRECT' in var:
                     var = 'DISABLE_SSL_REDIRECT=true'
+                elif var.startswith('ADMIN_KEY'):
+                    var = f'ADMIN_KEY={self.config["admin_key"]}'
+                elif var.startswith('ADMIN_PASSWORD'):
+                    var = f'ADMIN_PASSWORD={self.config["admin_password"]}'
                 env.append(var.strip())
 
         with (self.misp_docker_dir / '.env').open('w') as _env:
@@ -197,20 +202,20 @@ class MISPDocker():
         cur_dir = os.getcwd()
         os.chdir(self.misp_docker_dir)
         # Remove pymisp directory, blocks update
-        command = shlex.split('sudo docker compose exec -T misp-core /bin/rm -rf /var/www/MISP/PyMISP')
-        _print_output(command)
+        # command = shlex.split('sudo docker compose exec -T misp-core /bin/rm -rf /var/www/MISP/PyMISP')
+        # _print_output(command)
         # revert change in default config, blocks update
-        command = shlex.split('sudo docker compose exec -T misp-core /usr/bin/git checkout -- /var/www/MISP/app/Config/config.default.php')
-        _print_output(command)
+        # command = shlex.split('sudo docker compose exec -T misp-core /usr/bin/git checkout -- /var/www/MISP/app/Config/config.default.php')
+        # _print_output(command)
         # Change perms
-        command = shlex.split('sudo docker compose exec -T misp-core /bin/chown -R www-data:www-data /var/www/MISP')
-        _print_output(command)
+        # command = shlex.split('sudo docker compose exec -T misp-core /bin/chown -R www-data:www-data /var/www/MISP')
+        # _print_output(command)
         # Init admin user
-        command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake userInit')
-        _print_output(command)
+        # command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake userInit')
+        # _print_output(command)
         # Set baseurl
-        command = shlex.split(f'sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake admin setSetting MISP.baseurl {self.config["baseurl"]}')
-        _print_output(command)
+        # command = shlex.split(f'sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake admin setSetting MISP.baseurl {self.config["baseurl"]}')
+        # _print_output(command)
         # Run DB updates
         command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake Admin runUpdates')
         _print_output(command)
@@ -218,19 +223,19 @@ class MISPDocker():
         command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake Admin updatesDone 1')
         _print_output(command)
         # Set the admin password
-        command = shlex.split(f'sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake User change_pw admin@admin.test {self.config["admin_password"]}')
-        _print_output(command)
+        # command = shlex.split(f'sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake User change_pw admin@admin.test {self.config["admin_password"]}')
+        # _print_output(command)
         # Get the admin key
-        command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake User change_authkey admin@admin.test')
-        print(command)
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        out, err = p.communicate()
-        if out:
-            key = out.split(b' ')[-1].decode().strip()
-            print(key)
-            self.config['admin_key'] = key
-        else:
-            print('error:', err)
+        # command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake User change_authkey admin@admin.test')
+        # print(command)
+        # p = Popen(command, stdout=PIPE, stderr=PIPE)
+        # out, err = p.communicate()
+        # if out:
+        #    key = out.split(b' ')[-1].decode().strip()
+        #    print(key)
+        #    self.config['admin_key'] = key
+        # else:
+        #    print('error:', err)
         # Turn the instance live
         command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake live 1')
         _print_output(command)
