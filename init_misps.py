@@ -204,49 +204,6 @@ class MISPDocker():
         os.chdir(cur_dir)
         self.config['external_baseurl'] = f'http://{ip}'
 
-    def initial_misp_setup(self):
-        cur_dir = os.getcwd()
-        os.chdir(self.misp_docker_dir)
-        # Remove pymisp directory, blocks update
-        # command = shlex.split('sudo docker compose exec -T misp-core /bin/rm -rf /var/www/MISP/PyMISP')
-        # _print_output(command)
-        # revert change in default config, blocks update
-        # command = shlex.split('sudo docker compose exec -T misp-core /usr/bin/git checkout -- /var/www/MISP/app/Config/config.default.php')
-        # _print_output(command)
-        # Change perms
-        # command = shlex.split('sudo docker compose exec -T misp-core /bin/chown -R www-data:www-data /var/www/MISP')
-        # _print_output(command)
-        # Init admin user
-        # command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake userInit')
-        # _print_output(command)
-        # Set baseurl
-        # command = shlex.split(f'sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake admin setSetting MISP.baseurl {self.config["baseurl"]}')
-        # _print_output(command)
-        # Run DB updates
-        command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake Admin runUpdates')
-        _print_output(command)
-        # Make sure the updates are all done
-        command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake Admin updatesDone 1')
-        _print_output(command)
-        # Set the admin password
-        # command = shlex.split(f'sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake User change_pw admin@admin.test {self.config["admin_password"]}')
-        # _print_output(command)
-        # Get the admin key
-        # command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake User change_authkey admin@admin.test')
-        # print(command)
-        # p = Popen(command, stdout=PIPE, stderr=PIPE)
-        # out, err = p.communicate()
-        # if out:
-        #    key = out.split(b' ')[-1].decode().strip()
-        #    print(key)
-        #    self.config['admin_key'] = key
-        # else:
-        #    print('error:', err)
-        # Turn the instance live
-        command = shlex.split('sudo docker compose exec -T --user www-data misp-core /bin/bash /var/www/MISP/app/Console/cake admin live 1')
-        _print_output(command)
-        os.chdir(cur_dir)
-
 
 class MISPDockerManager():
 
@@ -292,7 +249,6 @@ class MISPDockerManager():
     def run_dockers(self):
         for misp_docker in self.misp_dockers:
             misp_docker.run()
-            misp_docker.initial_misp_setup()
             misp_docker.dump_config()
 
 
