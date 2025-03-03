@@ -182,6 +182,8 @@ class MISPDocker():
             json.dump(self.config, f, indent=2)
 
     def load_config(self) -> dict:
+        if not (self.misp_docker_dir / 'config.json').exists():
+            return {}
         with (self.misp_docker_dir / 'config.json').open() as f:
             return json.load(f)
 
