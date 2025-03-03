@@ -69,9 +69,10 @@ class MISPInstance():
             user.authkey = self.site_admin.get_new_authkey(user)
             self.config['site_admin_authkey'] = user.authkey  # type: ignore
         user.password = self.config.get('site_admin_password')
+        print(self.site_admin.root_url, user.password, self.force_reset_passwords, user.change_pw)
         if not user.password or self.force_reset_passwords:
             dump_config = True
-            if user.change_pw in ['1', True, 1] or self.force_reset_passwords:  # type: ignore
+            if not user.password or user.change_pw in ['1', True, 1] or self.force_reset_passwords:  # type: ignore
                 # Only change the password if the user never logged in.
                 user.password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
                 self.site_admin.update_user({'password': user.password, 'change_pw': 0}, user.id)  # type: ignore
@@ -118,7 +119,7 @@ class MISPInstance():
         user.password = self.config.get('orgadmin_password')
         if not user.password or self.force_reset_passwords:
             dump_config = True
-            if user.change_pw in ['1', True, 1] or self.force_reset_passwords:  # type: ignore
+            if not user.password or user.change_pw in ['1', True, 1] or self.force_reset_passwords:  # type: ignore
                 # Only change the password if the user never logged in.
                 user.password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
                 self.site_admin.update_user({'password': user.password, 'change_pw': 0}, user.id)  # type: ignore
