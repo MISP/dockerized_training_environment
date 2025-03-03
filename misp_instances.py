@@ -157,6 +157,7 @@ class MISPInstance():
                 break
             except Exception as e:
                 print(f'Unable to connect to {self.baseurl}', e)
+                print("##################### Please wait #####################")
                 time.sleep(5)
 
         self.site_admin.toggle_global_pythonify()
@@ -439,8 +440,14 @@ class MISPInstances():
         for path in self.misp_instances_dir.glob(f'{self.prefix_client_node}*'):
             if path.name == central_node_name:
                 continue
-            instance = MISPInstance(path / 'config.json', force_reset_passwords)
-            self.client_nodes[instance.owner_orgname] = instance
+            while True:
+                try:
+                    instance = MISPInstance(path / 'config.json', force_reset_passwords)
+                    self.client_nodes[instance.owner_orgname] = instance
+                    break
+                except Exception as e:
+                    print(f'Error connecting to {path}', e)
+                    time.sleep(5)
 
     def setup_instances(self):
         self.central_node.update_misp()
