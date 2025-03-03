@@ -62,8 +62,8 @@ class MISPInstance():
             user.role_id = 1  # Site admin
             user = create_or_update_site_admin(self.site_admin, user)
 
-        user.authkey = self.config.get('site_admin_authkey')
         dump_config = False
+        user.authkey = self.config.get('site_admin_authkey')
         if not user.authkey:  # type: ignore
             dump_config = True
             user.authkey = self.site_admin.get_new_authkey(user)
@@ -107,8 +107,9 @@ class MISPInstance():
             user.role_id = 2  # Site admin
             user = self.create_or_update_user(user)
 
-        user.authkey = self.config.get('orgadmin_authkey')
         dump_config = False
+
+        user.authkey = self.config.get('orgadmin_authkey')
         if not user.authkey:  # type: ignore
             dump_config = True
             user.authkey = self.site_admin.get_new_authkey(user)
@@ -182,7 +183,7 @@ class MISPInstance():
         self.enable_default_taxonomies()
         # Set remaining config
         self.owner_site_admin.set_server_setting('MISP.welcome_text_top', '', force=True)
-        self.owner_site_admin.set_server_setting('MISP.baseurl', self.baseurl, force=True)
+        # self.owner_site_admin.set_server_setting('MISP.baseurl', self.baseurl, force=True)
         self.owner_site_admin.set_server_setting('MISP.host_org_id', self.host_org.id)
         # self.owner_site_admin.set_server_setting('Security.rest_client_baseurl', 'http://127.0.0.1')
         self.change_session_timeout(6000)
