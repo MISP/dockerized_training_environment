@@ -24,6 +24,9 @@ if Path('certs').exists() and '../certs:/etc/nginx/certs' not in docker_content[
 if Path('nginx.tmpl').exists() and '../nginx.tmpl:/app/nginx.tmpl' not in docker_content['services']['nginx-proxy']['volumes']:
     docker_content['services']['nginx-proxy']['volumes'].append('../nginx.tmpl:/app/nginx.tmpl')
 
+if Path('nginx-local.conf').exists() and '../nginx-local.conf:/etc/nginx/conf.d/nginx-local.conf:ro' not in docker_content['services']['nginx-proxy']['volumes']:
+    docker_content['services']['nginx-proxy']['volumes'].append('../nginx-local.conf:/etc/nginx/conf.d/nginx-local.conf:ro')
+
 if cert_name:
     if not docker_content['services']['nginx-proxy'].get('environment'):
         docker_content['services']['nginx-proxy']['environment'] = []
