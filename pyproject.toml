@@ -15,10 +15,10 @@ dependencies = [
 package-mode = false
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
-ipython = "^8.32.0"
+pytest = "^8.3.5"
+ipython = "^8.35.0"
 mypy = "^1.15.0"
-types-PyYAML = "^6.0.12.20241230"
+types-PyYAML = "^6.0.12.20250402"
 
 [build-system]
 requires = ["poetry_core>=2.0"]
