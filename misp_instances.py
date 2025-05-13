@@ -325,14 +325,23 @@ class MISPInstance():
         feed_dir.mkdir(parents=True, exist_ok=True)
         manifest = {}
         hashes = []
-        for event in self.owner_site_admin.search(metadata=True):
-            e: MISPEvent = self.owner_site_admin.get_event(event.uuid, deleted=True)  # type: ignore
-            e_feed = e.to_feed(with_meta=True, with_distribution=True,
-                               with_local_tags=True, with_event_reports=True)
-            hashes += [[h, e.uuid] for h in e_feed['Event'].pop('_hashes')]  # type: ignore
-            manifest.update(e_feed['Event'].pop('_manifest'))
-            with (feed_dir / f'{event.uuid}.json').open('w') as _fw:  # type: ignore
-                json.dump(e_feed, _fw, indent=2)
+        page = 0
+        limit = 100
+        while True:
+            events = self.owner_site_admin.search(metadata=True, page=page, limit=limit)
+            for event in events:
+                e: MISPEvent = self.owner_site_admin.get_event(event.uuid, deleted=True)  # type: ignore
+                e_feed = e.to_feed(with_meta=True, with_distribution=True,
+                                   with_local_tags=True, with_event_reports=True)
+                hashes += [[h, e.uuid] for h in e_feed['Event'].pop('_hashes')]  # type: ignore
+                manifest.update(e_feed['Event'].pop('_manifest'))
+                with (feed_dir / f'{event.uuid}.json').open('w') as _fw:  # type: ignore
+                    json.dump(e_feed, _fw, indent=2)
+            if len(events) < 100:
+                break
+            else:
+                print(page, len(events))
+            page += 1
         with (feed_dir / 'hashes.csv').open('w') as hash_file:
             for element in hashes:
                 hash_file.write('{},{}\n'.format(element[0], element[1]))
