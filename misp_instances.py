@@ -14,10 +14,23 @@ from typing import Optional
 
 from pymisp import PyMISP, MISPUser, MISPTag, MISPOrganisation, MISPSharingGroup, MISPEvent
 
-from generic_config import (central_node_name, prefix_client_node, secure_connection,
-                            internal_network_name, enabled_taxonomies, enabled_taxonomies_central_node,
-                            unpublish_on_sync, tag_central_to_nodes, tag_nodes_to_central, local_tags_central,
-                            reserved_tags_central, local_tags_clients, central_node_server_settings)
+from generic_config import (
+    central_node_name,
+    prefix_client_node,
+    secure_connection,
+    internal_network_name,
+    enabled_taxonomies,
+    enabled_taxonomies_central_node,
+    unpublish_on_sync,
+    tag_central_to_nodes,
+    tag_nodes_to_central,
+    local_tags_central,
+    reserved_tags_central,
+    local_tags_clients,
+    central_node_server_settings,
+    additional_orgs_per_instance,
+    additional_sharinggroups,
+)
 
 
 def create_or_update_site_admin(connector: PyMISP, user: MISPUser) -> MISPUser:
@@ -57,7 +70,7 @@ class MISPInstance():
         else:
             # The user doesn't exists
             user = MISPUser()
-            user.email = self.config['email_site_admin']
+            user.email = self.config["email_site_admin"]
             user.org_id = self.host_org.id
             user.role_id = 1  # Site admin
             user = create_or_update_site_admin(self.site_admin, user)
@@ -103,7 +116,7 @@ class MISPInstance():
         else:
             # The user doesn't exists
             user = MISPUser()
-            user.email = self.config['email_orgadmin']
+            user.email = self.config["email_orgadmin"]
             user.org_id = self.host_org.id
             user.role_id = 2  # Site admin
             user = self.create_or_update_user(user)
@@ -150,6 +163,7 @@ class MISPInstance():
         self.owner_orgname = self.config['admin_orgname']
         self.baseurl = self.config['baseurl']
         self.hostname = self.config['hostname']
+        self.instance_id = self.config["instance_id"]
         while True:
             try:
                 self.site_admin = PyMISP(self.baseurl, self.config['admin_key'],
@@ -270,7 +284,7 @@ class MISPInstance():
                     return to_return_user
                 raise Exception(f'Unable to update {user.email}: {to_return_user}')
         else:
-            raise Exception(f'Unable to create {user.email}: {to_return_user}')
+            raise Exception(f"Unable to create {user.email}: {to_return_user}")
 
     def create_or_update_tag(self, tag: MISPTag) -> MISPTag:
         to_return_tag = self.owner_site_admin.add_tag(tag)
@@ -284,7 +298,7 @@ class MISPInstance():
                     return to_return_tag
                 raise Exception(f'Unable to update {tag.name}: {to_return_tag}')
         else:
-            raise Exception(f'Unable to create {tag.name}: {to_return_tag}')
+            raise Exception(f"Unable to create {tag.name}: {to_return_tag}")
 
     def create_or_update_organisation(self, organisation: MISPOrganisation) -> MISPOrganisation:
         to_return_org = self.site_admin.add_organisation(organisation)
@@ -298,7 +312,7 @@ class MISPInstance():
                     return self.site_admin.get_organisation(o.id)  # type: ignore
                 raise Exception(f'Unable to update {organisation.name}: {to_return_org}')
         else:
-            raise Exception(f'Unable to create {organisation.name}: {to_return_org}')
+            raise Exception(f"Unable to create {organisation.name}: {to_return_org}")
 
     def init_default_user(self, email, password='Password1234', role_id=1, org_id=None):
         '''Default user is a local admin in the host org'''
@@ -312,7 +326,7 @@ class MISPInstance():
                     user.org_id = org.id
                     break
             else:
-                raise Exception('No default org found.')
+                raise Exception("No default org found.")
         user.role_id = role_id
         user.password = password
         self.create_or_update_user(user)
@@ -382,7 +396,9 @@ class MISPInstance():
                 break
         else:
             print(server_sync_config.to_json())
-            server = self.owner_site_admin.import_server(server_sync_config, pythonify=True)
+            server = self.owner_site_admin.import_server(
+                server_sync_config, pythonify=True
+            )
         server.pull = True
         server.push = True  # Not automatic, but allows to do a push
         server.push_galaxy_clusters = True
@@ -428,12 +444,21 @@ class MISPInstance():
                 break
         else:
             sharing_group = MISPSharingGroup()
-            sharing_group.name = f'Sharing group with {server_sync_config.Organisation["name"]}'
-            sharing_group.releasability = 'Training'
+            sharing_group.name = (
+                f'Sharing group with {server_sync_config.Organisation["name"]}'
+            )
+            sharing_group.releasability = "Training"
             self.sharing_group = self.owner_site_admin.add_sharing_group(sharing_group)
             self.owner_site_admin.add_server_to_sharing_group(self.sharing_group, server)
             self.owner_site_admin.add_org_to_sharing_group(self.sharing_group, server_sync_config.Organisation)
             self.owner_site_admin.add_org_to_sharing_group(self.sharing_group, self.host_org)
+
+    def provision_additional_orgs(self, additional_orgs):
+        for org in additional_orgs:
+            self.create_or_update_organisation(org)
+
+    def provision_sharinggroup(self, sg):
+        self.owner_site_admin.add_sharing_group(sg)
 
 
 class MISPInstances():
@@ -516,6 +541,55 @@ class MISPInstances():
             sync_server_config = self.central_node.create_sync_user(instance.host_org, instance.hostname)
             sync_server_config.name = f'Sync with {sync_server_config.Organisation["name"]}'
             instance.configure_sync(sync_server_config)
+
+        # Provision additional orgs, keeping track of UUIDs
+        all_orgs = {}
+        for o in self.central_node.site_admin.organisations(scope="all"):
+            all_orgs[o.name] = o
+
+        for _, org_list in additional_orgs_per_instance.items(): # Create all additional orgs on the central node
+            for org_name in org_list:
+                if org_name not in all_orgs:
+                    organisation = MISPOrganisation()
+                    organisation.name = org_name
+                    to_return_org = self.central_node.site_admin.add_organisation(organisation)
+                    all_orgs[org_name] = to_return_org
+
+        for owner_org_name, instance in self.client_nodes.items():
+            additional_org_names = additional_orgs_per_instance[instance.instance_id]
+            additional_orgs = [
+                all_orgs[name] for name in additional_org_names
+            ]
+            instance.provision_additional_orgs(additional_orgs)
+
+        # Provision additional sharing gorups, keeping track of UUIDs
+        all_sgs = {}
+        for sg in self.central_node.site_admin.sharing_groups():
+            all_sgs[sg.name] = sg
+
+        sg_org_central = all_orgs[self.central_node.host_org.name].to_dict()
+        sg_org_central["extend"] = False
+        for sg_name, org_list in additional_sharinggroups.items(): # Create all additional sgs on the central node
+            sharing_group = MISPSharingGroup()
+            sharing_group.name = sg_name
+            sharing_group.releasability = sg_name
+            sharing_group.add_sgorg(sg_org_central) # Also add the central org to the group
+            for org_name in org_list:
+                if org_name not in all_orgs:
+                    print(f"{org_name} does not exists. Skipping it")
+                    continue
+                organisation = all_orgs[org_name]
+                sg_org = organisation.to_dict()
+                sg_org['extend'] = False
+                sharing_group.add_sgorg(sg_org)
+            to_return_sg = self.central_node.owner_site_admin.add_sharing_group(sharing_group)
+            all_sgs[sg_name] = to_return_sg
+
+        for owner_org_name, instance in self.client_nodes.items(): # Loop over all nodes and add any sgs they are part of
+            for sg_name, sharing_group in all_sgs.items():
+                sharing_group_org_names = [org.Organisation.name for org in sharing_group.sgorgs]
+                if owner_org_name in sharing_group_org_names:
+                    instance.provision_sharinggroup(sharing_group)
 
     def setup_sync_central_only(self):
         instances = list(self.client_nodes.values())

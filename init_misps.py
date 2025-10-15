@@ -12,8 +12,8 @@ import string
 import yaml
 
 from generic_config import (internal_network_name, number_instances, central_node_name,
-                            hostname_suffix, prefix_client_node, admin_email_name, orgadmin_email_name,
-                            central_node_org_name, client_node_org_name_prefix, url_scheme)
+                            hostname_suffix, prefix_client_node, admin_email_name, orgadmin_email_name, client_node_name_getter,
+                            central_node_org_name, client_node_org_name_prefix, client_node_org_name_getter, url_scheme)
 
 
 def _print_output(command):
@@ -35,6 +35,8 @@ class MISPDocker():
             self.misp_docker_dir = root_dir / central_node_name
         else:
             client_name = f'{prefix_client_node}{instance_id:0{instances_number_width}}'
+            if client_node_name_getter is not None:
+                client_name = client_node_name_getter(instance_id)
             self.misp_docker_dir = root_dir / client_name
 
         if config := self.load_config():
@@ -47,6 +49,7 @@ class MISPDocker():
                 'admin_key': ''.join(random.choices(string.ascii_letters, k=40))
             }
 
+        self.config["instance_id"] = self.instance_id
         if self.instance_id == 0:
             self.config['baseurl'] = f'{url_scheme}://{central_node_name}{hostname_suffix}'
             self.config['hostname'] = f'{central_node_name}{hostname_suffix}'
@@ -60,6 +63,8 @@ class MISPDocker():
             self.config['email_site_admin'] = f"{admin_email_name}@{self.config['hostname']}"
             self.config['email_orgadmin'] = f"{orgadmin_email_name}@{self.config['hostname']}"
             self.config['admin_orgname'] = f'{client_node_org_name_prefix}{instance_id:0{instances_number_width}}'
+            if client_node_org_name_getter is not None:
+                self.config['admin_orgname'] = client_node_org_name_getter(instance_id)
             self.config['certname'] = f'{hostname_suffix[1:]}'  # get rid of the .
 
         if self.misp_docker_dir.exists():
