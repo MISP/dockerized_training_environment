@@ -16,6 +16,8 @@ def auth_from_config(config):
 if __name__ == '__main__':
     to_dump = []
     for cp in Path('misps').glob('**/config.json'):
+        if len(cp.relative_to(Path("misps")).parents) > 2: # Do not go further than root directory (currently breaking because of misp-guard's config file)
+            continue
         with cp.open() as f:
             config = json.load(f)
         auth_admin, site_admin, org_admin = auth_from_config(config)
