@@ -314,6 +314,20 @@ class MISPInstance():
         else:
             raise Exception(f"Unable to create {organisation.name}: {to_return_org}")
 
+    def create_or_update_sharinggroup(self, sharinggroup: MISPSharingGroup) -> MISPSharingGroup:
+        # The sharinggroup is probably already there
+        for s in self.owner_site_admin.sharing_groups():
+            if s.name == sharinggroup.name:
+                to_return_sg = self.owner_site_admin.update_sharing_group(sharinggroup, s.id)
+                if isinstance(to_return_sg, MISPSharingGroup):
+                    return self.owner_site_admin.get_sharing_group(s.id)  # type: ignore
+                raise Exception(f'Unable to update {sharinggroup.name}: {to_return_sg}')
+        else:
+            to_return_sg = self.owner_site_admin.add_sharing_group(sharinggroup)
+            if isinstance(to_return_sg, MISPSharingGroup):
+                return to_return_sg
+        raise Exception(f"Unable to create {sharinggroup.name}: {to_return_sg}")
+
     def init_default_user(self, email, password='Password1234', role_id=1, org_id=None):
         '''Default user is a local admin in the host org'''
         user = MISPUser()
@@ -457,9 +471,6 @@ class MISPInstance():
         for org in additional_orgs:
             self.create_or_update_organisation(org)
 
-    def provision_sharinggroup(self, sg):
-        self.owner_site_admin.add_sharing_group(sg)
-
 
 class MISPInstances():
 
@@ -556,7 +567,7 @@ class MISPInstances():
                     all_orgs[org_name] = to_return_org
 
         for owner_org_name, instance in self.client_nodes.items():
-            additional_org_names = additional_orgs_per_instance[instance.instance_id]
+            additional_org_names = additional_orgs_per_instance.get(instance.instance_id, [])
             additional_orgs = [
                 all_orgs[name] for name in additional_org_names
             ]
@@ -582,14 +593,14 @@ class MISPInstances():
                 sg_org = organisation.to_dict()
                 sg_org['extend'] = False
                 sharing_group.add_sgorg(sg_org)
-            to_return_sg = self.central_node.owner_site_admin.add_sharing_group(sharing_group)
+            to_return_sg = self.central_node.create_or_update_sharinggroup(sharing_group)
             all_sgs[sg_name] = to_return_sg
 
         for owner_org_name, instance in self.client_nodes.items(): # Loop over all nodes and add any sgs they are part of
             for sg_name, sharing_group in all_sgs.items():
                 sharing_group_org_names = [org.Organisation.name for org in sharing_group.sgorgs]
                 if owner_org_name in sharing_group_org_names:
-                    instance.provision_sharinggroup(sharing_group)
+                    instance.create_or_update_sharinggroup(sharing_group)
 
     def setup_sync_central_only(self):
         instances = list(self.client_nodes.values())
