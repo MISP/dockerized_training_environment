@@ -523,7 +523,7 @@ class MISPInstances():
         for remote_instance in instances:
             remote_sync_config = remote_instance.create_sync_user(self.central_node.host_org, self.central_node.hostname)
             remote_sync_config.name = f'Sync with {remote_sync_config.Organisation["name"]}'
-            self.central_node.configure_sync(remote_sync_config)
+            self.central_node.configure_sync(remote_sync_config, from_central_node=True)
 
     def setup_sync_all(self):
         instances = list(self.client_nodes.values()) + [self.central_node]
