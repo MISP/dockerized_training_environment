@@ -8,7 +8,7 @@ import shlex
 import string
 import time
 
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, run
 from pathlib import Path
 from typing import Optional
 
@@ -214,8 +214,15 @@ class MISPInstance():
         return to_return
 
     def copy_file(self, src, dst):
-        '''Copy/paste a file from HOST to the docker filesystem (MISP container)'''
-        return self.pass_command_to_docker(f'docker cp {src} {self.misp_container_name}:{dst}')
+        '''Copy/paste a file from HOST to the docker filesystem (MISP container), owned by www-data'''
+        container = self.misp_container_name
+        # Like `cp`, `docker cp` puts src *inside* dst when dst is an existing directory
+        dst_is_dir = run(['docker', 'exec', container, 'test', '-d', dst], capture_output=True).returncode == 0
+        cp = run(['docker', 'cp', str(src), f'{container}:{dst}'], capture_output=True)
+        if cp.returncode == 0:
+            target = f"{dst.rstrip('/')}/{Path(src).name}" if dst_is_dir else dst
+            run(['docker', 'exec', container, 'chown', '-R', 'www-data:www-data', target], capture_output=True)
+        return cp.stdout, cp.stderr
 
     def update_external_baseurl(self, force: bool=False):
         command = f'sudo docker inspect -f "{{{{.NetworkSettings.Networks.{internal_network_name}.IPAddress}}}}" {self.misp_container_name}'
@@ -357,7 +364,8 @@ class MISPInstance():
         limit = 100
         while True:
             events = self.owner_site_admin.search(metadata=True, page=page, limit=limit)
-            for event in events:
+            for (i, event) in enumerate(events):
+                print(f"{i + 1}/{len(events)} - {event.uuid}")
                 e: MISPEvent = self.owner_site_admin.get_event(event.uuid, deleted=True)  # type: ignore
                 e_feed = e.to_feed(with_meta=True, with_distribution=True,
                                    with_local_tags=True, with_event_reports=True)
