@@ -31,6 +31,11 @@ from generic_config import (
     additional_orgs_per_instance,
     additional_sharinggroups,
 )
+import generic_config
+
+# Optional settings, missing from older config files: None leaves galaxies / object templates untouched
+enabled_galaxies = getattr(generic_config, 'enabled_galaxies', None)
+enabled_object_templates = getattr(generic_config, 'enabled_object_templates', None)
 
 
 def create_or_update_site_admin(connector: PyMISP, user: MISPUser) -> MISPUser:
@@ -270,6 +275,61 @@ class MISPInstance():
             except Exception as e:
                 print(f'Unable to update something: {e}')
                 time.sleep(5)
+        # Updating the JSONs adds (and enables) new galaxies / template versions, so restrict them afterwards
+        self.restrict_galaxies()
+        self.restrict_object_templates()
+
+    def _call_and_check(self, url_path, payload=None):
+        response = self.direct_call(url_path, payload)
+        if isinstance(response, dict) and (response.get('errors') or response.get('saved') is False):
+            print(f'{self.hostname}: {url_path} failed: {response}')
+        return response
+
+    def restrict_galaxies(self):
+        '''Enable the galaxies listed in `enabled_galaxies` (matched on type or namespace), disable all the others'''
+        if enabled_galaxies is None:
+            return
+        wanted = set(enabled_galaxies)
+        matched, changed = set(), 0
+        for entry in self._call_and_check('galaxies/index'):
+            galaxy = entry.get('Galaxy', entry)
+            hits = wanted & {galaxy['type'], galaxy['namespace']}
+            matched |= hits
+            if bool(galaxy['enabled']) != bool(hits):
+                self._call_and_check(f"galaxies/{'enable' if hits else 'disable'}/{galaxy['id']}", {})
+                changed += 1
+        print(f'{self.hostname}: galaxies restricted to {sorted(wanted)} ({changed} toggled)')
+        if unknown := wanted - matched:
+            print(f'{self.hostname}: no galaxy matches {sorted(unknown)} from enabled_galaxies')
+
+    def restrict_object_templates(self):
+        '''Activate the object templates listed in `enabled_object_templates` (matched on name), deactivate all the others'''
+        if enabled_object_templates is None:
+            return
+        wanted = set(enabled_object_templates)
+        # A template can exist in several versions (same uuid): only one of them may be active
+        versions_per_uuid: dict[str, list[dict]] = {}
+        for entry in self._call_and_check('objectTemplates/index/all'):
+            template = entry.get('ObjectTemplate', entry)
+            versions_per_uuid.setdefault(template['uuid'], []).append(template)
+
+        matched, changed = set(), 0
+        for versions in versions_per_uuid.values():
+            active = [t for t in versions if t['active']]
+            # /objectTemplates/activate toggles the state (and deactivates the other versions when activating)
+            if versions[0]['name'] in wanted:
+                matched.add(versions[0]['name'])
+                if not active:
+                    latest = max(versions, key=lambda t: int(t['version']))
+                    self._call_and_check('objectTemplates/activate', {'ObjectTemplate': {'data': latest['id']}})
+                    changed += 1
+            else:
+                for template in active:
+                    self._call_and_check('objectTemplates/activate', {'ObjectTemplate': {'data': template['id']}})
+                    changed += 1
+        print(f'{self.hostname}: object templates restricted to {sorted(wanted)} ({changed} toggled)')
+        if unknown := wanted - matched:
+            print(f'{self.hostname}: no object template matches {sorted(unknown)} from enabled_object_templates')
 
     def sync_push_all(self):
         for server in self.owner_site_admin.servers():

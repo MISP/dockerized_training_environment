@@ -52,6 +52,13 @@ tag_nodes_to_central = ['push_to_central', 'push_to_central_alt']
 # #### Other config
 enabled_taxonomies = ['tlp']
 enabled_taxonomies_central_node = []
+# Galaxies to keep enabled on all instances, matched on the galaxy type (e.g. 'mitre-attack-pattern')
+# or namespace (e.g. 'mitre-attack', which covers all the MITRE ATT&CK galaxies). All the others are disabled.
+# None leaves the galaxies untouched.
+enabled_galaxies = None
+# Object templates to keep enabled on all instances, matched on the template name (e.g. 'file', 'domain-ip').
+# All the others are disabled. None leaves the object templates untouched.
+enabled_object_templates = None
 unpublish_on_sync = False
 
 central_node_server_settings = {
