@@ -1,25 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import argparse
 from pathlib import Path
-import os
 import shlex
 from subprocess import Popen
 
 from generic_config import (central_node_name, prefix_client_node)
 
-root_misps = Path('misps')
+parser = argparse.ArgumentParser(description='Stop all the MISP instances.')
+parser.add_argument('--reset', action='store_true',
+                    help='Also remove the containers and their volumes (database, events, users, sync config). '
+                         'This cannot be undone.')
+args = parser.parse_args()
 
-# Start all the instances
-cur_dir = os.getcwd()
-os.chdir(root_misps / central_node_name)
-command = shlex.split('sudo docker compose stop')
-p = Popen(command)
-p.wait()
-os.chdir(cur_dir)
-for path in root_misps.glob(f'{prefix_client_node}*'):
-    cur_dir = os.getcwd()
-    os.chdir(path)
-    command = shlex.split('sudo docker compose stop')
-    p = Popen(command)
+root_misps = Path('misps')
+command = shlex.split('sudo docker compose down -v' if args.reset else 'sudo docker compose stop')
+
+# Stop all the instances
+for path in [root_misps / central_node_name, *root_misps.glob(f'{prefix_client_node}*')]:
+    p = Popen(command, cwd=path)
     p.wait()
-    os.chdir(cur_dir)
