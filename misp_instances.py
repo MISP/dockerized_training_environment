@@ -189,6 +189,11 @@ class MISPInstance():
         command = shlex.split('sudo docker compose ps -q misp-core')
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         self.misp_container_name = p.communicate()[0].decode().strip()
+        # Web frontend: misp-nginx (port 8080) since misp-docker 2026-07, misp-core itself (port 80) before
+        command = shlex.split('sudo docker compose ps -q misp-nginx')
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
+        nginx_container = p.communicate()[0].decode().strip()
+        self.web_container_name, self.web_port = (nginx_container, 8080) if nginx_container else (self.misp_container_name, 80)
         os.chdir(cur_dir)
 
         # Make sure the external baseurl is set
@@ -230,10 +235,10 @@ class MISPInstance():
         return cp.stdout, cp.stderr
 
     def update_external_baseurl(self, force: bool=False):
-        command = f'sudo docker inspect -f "{{{{.NetworkSettings.Networks.{internal_network_name}.IPAddress}}}}" {self.misp_container_name}'
+        command = f'sudo docker inspect -f "{{{{.NetworkSettings.Networks.{internal_network_name}.IPAddress}}}}" {self.web_container_name}'
         outs, errs = self.pass_command_to_docker(command)
         internal_ip = outs.strip().decode()
-        external_baseurl = f'http://{internal_ip}'
+        external_baseurl = f'http://{internal_ip}' if self.web_port == 80 else f'http://{internal_ip}:{self.web_port}'
         if force or external_baseurl != self.config['external_baseurl']:
             self.config['external_baseurl'] = external_baseurl
             self.update_misp_server_setting('MISP.external_baseurl', external_baseurl)

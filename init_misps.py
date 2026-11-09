@@ -16,6 +16,63 @@ from generic_config import (internal_network_name, number_instances, central_nod
                             central_node_org_name, client_node_org_name_prefix, client_node_org_name_getter, url_scheme)
 
 
+def _set_env(service: dict, values: dict) -> None:
+    '''Set (or replace) environment variables of a docker compose service, in list or dict form'''
+    env = service.get('environment') or []
+    if isinstance(env, dict):
+        env.update(values)
+    else:
+        env = [e for e in env if e.split('=', 1)[0] not in values] + [f'{k}={v}' for k, v in values.items()]
+    service['environment'] = env
+
+
+def web_frontend(docker_content: dict) -> tuple[str, int]:
+    '''Service serving the MISP web interface, and its plain HTTP port inside the container.
+    Since misp-docker 2026-07 (commit 17a2b93), nginx runs in its own `misp-nginx` container
+    (listening on 8080) and misp-core only runs PHP-FPM. Before that, misp-core served on port 80.'''
+    if 'misp-nginx' in docker_content['services']:
+        return 'misp-nginx', 8080
+    return 'misp-core', 80
+
+
+def adapt_docker_compose(docker_content: dict, config: dict) -> dict:
+    '''Plug a misp-docker compose file into the training environment:
+    * the web frontend is published on the host on `http_port` (and `https_port` for the old layout),
+    * nginx-proxy routes `hostname` to the frontend over plain HTTP, TLS is terminated by nginx-proxy,
+    * misp-core and the frontend join the shared network used for the sync between instances.'''
+    services = docker_content['services']
+    core = services['misp-core']
+    web_service, web_port = web_frontend(docker_content)
+    web = services[web_service]
+
+    if web_service == 'misp-core':
+        core['ports'] = [f'{config["http_port"]}:80', f'{config["https_port"]}:443']
+    else:
+        core.pop('ports', None)
+        # Only plain HTTP: the default 80/443 mappings would clash with nginx-proxy and the other instances
+        web['ports'] = [f'{config["http_port"]}:{web_port}']
+        # misp-nginx refuses to start with an https BASE_URL and no certificate in ./ssl.
+        # It only uses BASE_URL for that check, misp-core keeps the https one from .env.
+        _set_env(web, {'BASE_URL': f'http://{config["hostname"]}'})
+        # ... and with an http BASE_URL and a certificate: TLS is done by nginx-proxy, so never mount one
+        volumes = [v for v in web.get('volumes', []) if ':/etc/nginx/certs' not in v]
+        if volumes:
+            web['volumes'] = volumes
+        else:
+            web.pop('volumes', None)
+
+    _set_env(core, {'HOSTNAME': config['hostname']})
+    _set_env(web, {'VIRTUAL_HOST': config['hostname'],
+                   'VIRTUAL_PORT': str(web_port),
+                   'CERT_NAME': config['certname']})
+
+    # misp-core needs the shared network too: it opens the sync connections to the other instances
+    for service in {'misp-core', web_service}:
+        services[service]['networks'] = ['default', 'misp-test-sync']
+    docker_content['networks'] = {'misp-test-sync': {'name': internal_network_name, 'external': True}}
+    return docker_content
+
+
 def _print_output(command):
     p = Popen(command, stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
@@ -85,8 +142,8 @@ class MISPDocker():
         with (self.misp_docker_dir / 'docker-compose.yml').open() as f:
             docker_content = yaml.safe_load(f.read())
 
-        docker_content['services']['misp-core']['ports'] = [f'{self.config["http_port"]}:80',
-                                                            f'{self.config["https_port"]}:443']
+        adapt_docker_compose(docker_content, self.config)
+        self.web_service, self.web_port = web_frontend(docker_content)
 
         # Add refresh script
         if '../../misp-refresh:/var/www/MISP/misp-refresh/' not in docker_content['services']['misp-core']['volumes']:
@@ -129,26 +186,8 @@ class MISPDocker():
             if to_append not in docker_content['services']['misp-core']['volumes']:
                 docker_content['services']['misp-core']['volumes'].append(to_append)
 
-        # Add network configuration so all the containers are on the same
-        if not docker_content['services']['misp-core'].get('networks'):
-            # Setup the environment variables
-            environment = [f'VIRTUAL_HOST={self.config["hostname"]}',
-                           f'CERT_NAME={self.config["certname"]}',
-                           f'HOSTNAME={self.config["hostname"]}']
-            for e in docker_content['services']['misp-core'].pop('environment'):
-                if e.startswith('HOSTNAME'):
-                    # get rid of this one
-                    continue
-                # Keep the other ones
-                environment.append(e)
-            docker_content['services']['misp-core']['environment'] = environment
-
-            docker_content['services']['misp-core']['networks'] = ['default', 'misp-test-sync']
-
-            docker_content['networks'] = {'misp-test-sync': {'external': {'name': internal_network_name}}}
-
-            # do not bother with the modules
-            # docker_content['services'].pop('misp-modules')
+        # do not bother with the modules
+        # docker_content['services'].pop('misp-modules')
 
         with (self.misp_docker_dir / 'docker-compose.yml').open('w') as f:
             f.write(yaml.dump(docker_content, default_flow_style=False))
@@ -198,9 +237,9 @@ class MISPDocker():
         # Run the dockers
         command = shlex.split('sudo docker compose up -d --force-recreate')
         _print_output(command)
-        # Get IP on docker
+        # Get IP of the web frontend on the shared network (used by the other instances to sync)
         # # Get thing to inspect
-        command = shlex.split('sudo docker compose ps -q misp-core')
+        command = shlex.split(f'sudo docker compose ps -q {self.web_service}')
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         thing = p.communicate()[0].decode().strip()
         # Yes, 4 {, we need 2 in the output string
@@ -209,7 +248,7 @@ class MISPDocker():
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         ip = p.communicate()[0].decode().strip()
         os.chdir(cur_dir)
-        self.config['external_baseurl'] = f'http://{ip}'
+        self.config['external_baseurl'] = f'http://{ip}' if self.web_port == 80 else f'http://{ip}:{self.web_port}'
 
 
 class MISPDockerManager():
