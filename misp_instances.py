@@ -633,7 +633,7 @@ class MISPInstances():
         for o in self.central_node.site_admin.organisations(scope="all"):
             all_orgs[o.name] = o
 
-        for _, org_list in additional_orgs_per_instance.items(): # Create all additional orgs on the central node
+        for _, org_list in (additional_orgs_per_instance or {}).items(): # Create all additional orgs on the central node
             for org_name in org_list:
                 if org_name not in all_orgs:
                     organisation = MISPOrganisation()
@@ -642,7 +642,7 @@ class MISPInstances():
                     all_orgs[org_name] = to_return_org
 
         for owner_org_name, instance in self.client_nodes.items():
-            additional_org_names = additional_orgs_per_instance.get(instance.instance_id, [])
+            additional_org_names = (additional_orgs_per_instance or {}).get(instance.instance_id, [])
             additional_orgs = [
                 all_orgs[name] for name in additional_org_names
             ]
@@ -655,7 +655,7 @@ class MISPInstances():
 
         sg_org_central = all_orgs[self.central_node.host_org.name].to_dict()
         sg_org_central["extend"] = False
-        for sg_name, org_list in additional_sharinggroups.items(): # Create all additional sgs on the central node
+        for sg_name, org_list in (additional_sharinggroups or {}).items(): # Create all additional sgs on the central node
             sharing_group = MISPSharingGroup()
             sharing_group.name = sg_name
             sharing_group.releasability = sg_name
