@@ -181,6 +181,8 @@ class MISPInstance():
 
         self.site_admin.toggle_global_pythonify()
         admin_user = self.site_admin.get_user()
+        if not isinstance(admin_user, MISPUser):
+            raise RuntimeError(f'{self.baseurl}: the admin_key from {config_file} is rejected: {admin_user}')
         self.site_admin.update_user({'change_pw': 0}, admin_user.id)  # type: ignore
 
         # Get container name

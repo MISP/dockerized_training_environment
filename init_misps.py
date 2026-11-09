@@ -69,6 +69,12 @@ def adapt_docker_compose(docker_content: dict, config: dict) -> dict:
     # misp-core needs the shared network too: it opens the sync connections to the other instances
     for service in {'misp-core', web_service}:
         services[service]['networks'] = ['default', 'misp-test-sync']
+    if web_service != 'misp-core':
+        # misp-nginx reaches PHP-FPM via the name `misp-core`, but all the instances' misp-core answer
+        # to that name on the shared network: nginx would send requests to a random instance.
+        # Use an alias that only exists on the instance's own network instead.
+        core['networks'] = {'default': {'aliases': ['misp-fpm-local']}, 'misp-test-sync': {}}
+        _set_env(web, {'FASTCGI_LISTEN': 'misp-fpm-local:9002', 'FASTCGI_LISTEN_STATUS': 'misp-fpm-local:9003'})
     docker_content['networks'] = {'misp-test-sync': {'name': internal_network_name, 'external': True}}
     return docker_content
 
