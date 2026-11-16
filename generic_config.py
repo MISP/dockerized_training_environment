@@ -66,6 +66,11 @@ create_sync_sharing_groups = True
 central_node_server_settings = {
 }
 
+# Nationality of the organisations, used by set_org_nationalities.py (country flag + flag as logo).
+# Must be the exact country name from the MISP country galaxy (e.g. 'Czechia', 'United States of America'),
+# or 'Europe' / 'International'. Example: {'team-ALB': 'Albania', 'team-CERT-EU': 'Europe'}
+org_nationalities = {}
+
 # #### Special tags
 # The tags below will only be created on the central or client nodes and marked as non-exportable
 # Local tags for central node only
