@@ -33,9 +33,11 @@ from generic_config import (
 )
 import generic_config
 
-# Optional settings, missing from older config files: None leaves galaxies / object templates untouched
+# Optional settings, missing from older config files. None leaves galaxies / object templates untouched,
+# create_sync_sharing_groups defaults to the previous behaviour (True).
 enabled_galaxies = getattr(generic_config, 'enabled_galaxies', None)
 enabled_object_templates = getattr(generic_config, 'enabled_object_templates', None)
+create_sync_sharing_groups = getattr(generic_config, 'create_sync_sharing_groups', True)
 
 
 def create_or_update_site_admin(connector: PyMISP, user: MISPUser) -> MISPUser:
@@ -526,6 +528,8 @@ class MISPInstance():
             server.pull_rules = json.dumps(filter_tag_pull)
             server = self.owner_site_admin.update_server(server)
 
+        if not create_sync_sharing_groups:
+            return
         # Add sharing group
         for sg in self.owner_site_admin.sharing_groups():
             if sg.name == f'Sharing group with {server_sync_config.Organisation["name"]}':

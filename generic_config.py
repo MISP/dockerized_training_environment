@@ -60,6 +60,8 @@ enabled_galaxies = None
 # All the others are disabled. None leaves the object templates untouched.
 enabled_object_templates = None
 unpublish_on_sync = False
+# Create a 1-to-1 sharing group ("Sharing group with <org>") for each sync connection, on both sides.
+create_sync_sharing_groups = True
 
 central_node_server_settings = {
 }
